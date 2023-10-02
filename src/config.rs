@@ -12,21 +12,22 @@ use tracing::debug;
 
 use crate::errors::HttpSplitterError;
 
+const DEFAULT_LISTENER_PORT: u16 = 8080;
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
 const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct AppConfig {
     pub splitters: Vec<SplitterListenerConfig>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SplitterListenerConfig {
-    name: String,
-    #[serde(rename = "on")]
+    name: Option<String>,
+    #[serde(rename = "on", default)]
     listen_on: ListenOn,
     #[serde(
         with = "humantime_serde",
@@ -36,6 +37,7 @@ pub struct SplitterListenerConfig {
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
     targets: Vec<TargetConfig>,
+    #[serde(default)]
     response: ResponseConfig,
 }
 
@@ -43,12 +45,29 @@ impl SplitterListenerConfig {
     fn default_listener_timeout() -> Duration {
         Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
     }
+
+    pub fn get_name(self) -> String {
+        if let Some(name) = self.name {
+            name
+        } else {
+            format!("LISTENER-{}", self.listen_on)
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ListenOn {
     ip: Ipv4Addr,
     port: u16,
+}
+
+impl Default for ListenOn {
+    fn default() -> Self {
+        Self {
+            ip: Ipv4Addr::new(0, 0, 0, 0),
+            port: DEFAULT_LISTENER_PORT,
+        }
+    }
 }
 
 impl ListenOn {
@@ -115,13 +134,13 @@ impl<'de> Deserialize<'de> for ListenOn {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct HeaderTransform {
     action: HeaderTransformActon,
     value: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
 enum HeaderTransformActon {
     Add(String),
@@ -230,10 +249,10 @@ enum HttpMethod {
     Head,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 struct TargetConfig {
-    id: String,
+    id: Option<String>,
     url: String,
     headers: Option<Vec<HeaderTransform>>,
     #[serde(default = "TargetConfig::default_body")]
@@ -253,9 +272,17 @@ impl TargetConfig {
     fn default_body() -> String {
         "${REQUEST_BODY}".into()
     }
+
+    pub fn get_id(self) -> String {
+        if let Some(id) = self.id {
+            id
+        } else {
+            format!("TARGET-{}", self.url)
+        }
+    }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields, default)]
 struct ResponseConfig {
     strategy: ResponseStrategy,
@@ -282,7 +309,7 @@ impl Default for ResponseConfig {
     }
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 enum ResponseStrategy {
     AlwaysOverride,
@@ -296,7 +323,7 @@ enum ResponseStrategy {
     FailedThenOverride,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
 enum ResponseTargetSelector {
     #[default]
@@ -305,7 +332,7 @@ enum ResponseTargetSelector {
     Random,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 struct OverrideConfig {
     status: Option<ResponseStatus>,
@@ -313,7 +340,7 @@ struct OverrideConfig {
     headers: Option<Vec<HeaderTransform>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ResponseStatus {
     code: u16,
     msg: Option<String>,
@@ -394,6 +421,7 @@ impl AppConfig {
             cause: e,
         })?;
         let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
+
         debug!("Application config: {:#?}", config);
         Ok(config)
     }
