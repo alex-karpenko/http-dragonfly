@@ -17,13 +17,13 @@ const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct SplitterConfig {
-    pub listeners: Vec<ListenerConfig>,
+pub struct AppConfig {
+    pub splitters: Vec<SplitterListenerConfig>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct ListenerConfig {
+pub struct SplitterListenerConfig {
     name: String,
     #[serde(rename = "on")]
     listen_on: ListenOn,
@@ -44,7 +44,7 @@ impl ListenOn {
         Ipv4Addr::from_str(ip).map_err(|_| String::from(INVALID_IP_ADDRESS_ERROR))
     }
 
-    fn from_string(v: &str) -> Result<Self, String> {
+    fn from_str(v: &str) -> Result<Self, String> {
         let splitted: Vec<_> = v.trim().split(':').collect();
 
         if splitted.len() == 1 {
@@ -91,18 +91,11 @@ impl<'de> Deserialize<'de> for ListenOn {
                 formatter.write_str("an IP address (or `0.0.0.0` or `*`) and port separated by colon, like `1.2.3.4:8080`")
             }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                ListenOn::from_string(&v).map_err(|e| E::custom(e))
-            }
-
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: de::Error,
             {
-                self.visit_string(v.into())
+                ListenOn::from_str(v).map_err(|e| E::custom(e))
             }
         }
 
@@ -251,22 +244,29 @@ impl TargetConfig {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, default)]
 struct ResponseConfig {
     strategy: ResponseStrategy,
     target_selector: ResponseTargetSelector,
     failure_status_regex: String,
     failure_on_timeout: bool,
-    #[serde(default = "ResponseConfig::default_timeout_status")]
     timeout_status: ResponseStatus,
     cancel_unneeded_targets: bool,
     #[serde(rename = "override")]
     override_config: Option<OverrideConfig>,
 }
 
-impl ResponseConfig {
-    fn default_timeout_status() -> ResponseStatus {
-        String::from("504 Gateway Timeout").into()
+impl Default for ResponseConfig {
+    fn default() -> Self {
+        Self {
+            strategy: Default::default(),
+            target_selector: Default::default(),
+            failure_status_regex: "4\\d{2}|5\\d{2}".into(),
+            failure_on_timeout: true,
+            timeout_status: "504 Gateway Timeout".into(),
+            cancel_unneeded_targets: false,
+            override_config: None,
+        }
     }
 }
 
@@ -320,18 +320,11 @@ impl<'de> Deserialize<'de> for ResponseStatus {
                 formatter.write_str("a string with three-digit status code and optional status message, i.e. `200 OK`")
             }
 
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                ResponseStatus::from_string(v).map_err(|e| E::custom(e.to_string()))
-            }
-
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: de::Error,
             {
-                self.visit_string(v.into())
+                ResponseStatus::from_str(v).map_err(|e| E::custom(e.to_string()))
             }
         }
 
@@ -340,10 +333,10 @@ impl<'de> Deserialize<'de> for ResponseStatus {
 }
 
 impl ResponseStatus {
-    fn from_string(v: String) -> Result<Self, HttpSplitterError> {
+    fn from_str(v: &str) -> Result<Self, HttpSplitterError> {
         let re = Regex::new(r"^(?P<code>\d{3})\s*(?P<msg>.*)$")
             .unwrap_or_else(|e| panic!("looks like a BUG: {e}"));
-        let caps = re.captures(&v);
+        let caps = re.captures(v);
 
         if let Some(caps) = caps {
             let code: u16 =
@@ -366,9 +359,9 @@ impl ResponseStatus {
     }
 }
 
-impl From<String> for ResponseStatus {
-    fn from(value: String) -> Self {
-        ResponseStatus::from_string(value).unwrap()
+impl From<&str> for ResponseStatus {
+    fn from(value: &str) -> Self {
+        ResponseStatus::from_str(value).unwrap()
     }
 }
 
@@ -382,18 +375,14 @@ impl Display for ResponseStatus {
     }
 }
 
-impl SplitterConfig {
-    pub fn from(filename: &String) -> Result<SplitterConfig, HttpSplitterError> {
+impl AppConfig {
+    pub fn from(filename: &String) -> Result<AppConfig, HttpSplitterError> {
         let config = read_to_string(filename).map_err(|e| HttpSplitterError::LoadConfigFile {
             filename: filename.clone(),
             cause: e,
         })?;
-        let config: SplitterConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
-        debug!("{:#?}", config);
+        let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
+        debug!("Application config: {:#?}", config);
         Ok(config)
-    }
-
-    pub fn len(&self) -> usize {
-        self.listeners.len()
     }
 }

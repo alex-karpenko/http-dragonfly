@@ -25,9 +25,10 @@ pub struct CliConfig {
 impl CliConfig {
     pub fn new() -> CliConfig {
         let config: CliConfig = Parser::parse();
-        debug!("CLI config: {:?}", config);
-
         config.setup_logger();
+
+        debug!("CLI config: {:#?}", config);
+
         config
     }
 
