@@ -13,6 +13,7 @@ use tracing::debug;
 use crate::errors::HttpSplitterError;
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
+const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
 const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 
 #[derive(Deserialize, Debug)]
@@ -27,10 +28,21 @@ pub struct SplitterListenerConfig {
     name: String,
     #[serde(rename = "on")]
     listen_on: ListenOn,
+    #[serde(
+        with = "humantime_serde",
+        default = "SplitterListenerConfig::default_listener_timeout"
+    )]
+    timeout: Duration,
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
     targets: Vec<TargetConfig>,
     response: ResponseConfig,
+}
+
+impl SplitterListenerConfig {
+    fn default_listener_timeout() -> Duration {
+        Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
+    }
 }
 
 #[derive(Debug)]
