@@ -7,12 +7,13 @@ use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::{fmt::Display, fs::read_to_string, time::Duration};
+use std::{fmt::Display, fs::read_to_string, net::Ipv4Addr, str::FromStr, time::Duration};
 use tracing::debug;
 
 use crate::errors::HttpSplitterError;
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
+const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -25,11 +26,88 @@ pub struct SplitterConfig {
 pub struct ListenerConfig {
     name: String,
     #[serde(rename = "on")]
-    listen_on: String,
+    listen_on: ListenOn,
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
     targets: Vec<TargetConfig>,
     response: ResponseConfig,
+}
+
+#[derive(Debug)]
+struct ListenOn {
+    ip: Ipv4Addr,
+    port: u16,
+}
+
+impl ListenOn {
+    fn parse_ip_address(ip: &str) -> Result<Ipv4Addr, String> {
+        Ipv4Addr::from_str(ip).map_err(|_| String::from(INVALID_IP_ADDRESS_ERROR))
+    }
+
+    fn from_string(v: &str) -> Result<Self, String> {
+        let splitted: Vec<_> = v.trim().split(':').collect();
+
+        if splitted.len() == 1 {
+            let port: u16 = splitted[0]
+                .parse()
+                .map_err(|e| format!("invalid port value `{}`: {e}", splitted[0]))?;
+            let ip = Ipv4Addr::new(0, 0, 0, 0);
+
+            Ok(ListenOn { ip, port })
+        } else if splitted.len() == 2 {
+            let port: u16 = splitted[1]
+                .parse()
+                .map_err(|e| format!("invalid port value `{}`: {e}", splitted[1]))?;
+
+            let ip = if splitted[0].is_empty() || splitted[0] == "*" {
+                Ipv4Addr::new(0, 0, 0, 0)
+            } else {
+                Self::parse_ip_address(splitted[0])?
+            };
+
+            Ok(ListenOn { ip, port })
+        } else {
+            Err("invalid `listen on` token, should be in form IP:PORT".into())
+        }
+    }
+}
+
+impl Display for ListenOn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.ip, self.port)
+    }
+}
+
+impl<'de> Deserialize<'de> for ListenOn {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ListenOnVisitor;
+        impl<'de> Visitor<'de> for ListenOnVisitor {
+            type Value = ListenOn;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("an IP address (or `0.0.0.0` or `*`) and port separated by colon, like `1.2.3.4:8080`")
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                ListenOn::from_string(&v).map_err(|e| E::custom(e))
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(v.into())
+            }
+        }
+
+        deserializer.deserialize_string(ListenOnVisitor)
+    }
 }
 
 #[derive(Debug)]
@@ -123,14 +201,14 @@ impl<'de> Deserialize<'de> for HeaderTransform {
                     }
                     Ok(HeaderTransform { action, value })
                 } else {
-                    return Err(de::Error::missing_field(
+                    Err(de::Error::missing_field(
                         "action should be one of add/drop/replace",
-                    ));
+                    ))
                 }
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["add", "drop", "replace", "value"];
+        const FIELDS: &[&str] = &["add", "drop", "replace", "value"];
         deserializer.deserialize_struct("HeaderAction", FIELDS, HeaderTransformVisitor)
     }
 }
