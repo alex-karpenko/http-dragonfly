@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::fs::read_to_string;
 use tracing::debug;
 
-use crate::errors::HttpSplitterError;
+use crate::{errors::HttpSplitterError, context::Context};
 
 use self::splitter::SplitterListenerConfig;
 
@@ -23,7 +23,7 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn from(filename: &String) -> Result<AppConfig, HttpSplitterError> {
+    pub fn from(filename: &String, ctx: &Context) -> Result<AppConfig, HttpSplitterError> {
         let config = read_to_string(filename).map_err(|e| HttpSplitterError::LoadConfigFile {
             filename: filename.clone(),
             cause: e,
