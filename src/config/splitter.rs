@@ -1,5 +1,5 @@
-use std::time::Duration;
 use serde::Deserialize;
+use std::time::Duration;
 
 use super::{
     headers::HeaderTransform,

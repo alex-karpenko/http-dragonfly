@@ -9,10 +9,11 @@ use figment::{
     Figment,
 };
 use serde::Deserialize;
+use shellexpand::env_with_context_no_errors;
 use std::fs::read_to_string;
 use tracing::debug;
 
-use crate::{errors::HttpSplitterError, context::Context};
+use crate::{context::Context, errors::HttpSplitterError};
 
 use self::splitter::SplitterListenerConfig;
 
@@ -28,6 +29,7 @@ impl AppConfig {
             filename: filename.clone(),
             cause: e,
         })?;
+        let config = env_with_context_no_errors(&config, |v| ctx.get(&v.into()));
         let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
 
         debug!("Application config: {:#?}", config);

@@ -12,7 +12,7 @@ use std::error::Error;
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli_config = CliConfig::new();
     let ctx = Context::root();
-    let app_config = AppConfig::from(&cli_config.config, &ctx)?;
+    let app_config = AppConfig::from(&cli_config.config, ctx)?;
 
     Ok(())
 }

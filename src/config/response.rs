@@ -1,10 +1,10 @@
-use std::fmt::Display;
 use figment::Error;
 use regex::Regex;
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
 };
+use std::fmt::Display;
 
 use crate::errors::HttpSplitterError;
 
