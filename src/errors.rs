@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::io;
 use thiserror::Error;
 
 #[derive(Error)]
@@ -9,11 +9,6 @@ pub enum HttpSplitterError {
     ParseConfigFile {
         #[from]
         cause: figment::Error,
-    },
-    #[error("unable to substitute environment variable '{}': {}", .variable, .cause)]
-    EnvironmentVariableSubstitution {
-        variable: String,
-        cause: env::VarError,
     },
 }
 

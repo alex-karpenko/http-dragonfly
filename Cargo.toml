@@ -11,10 +11,10 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = {version = "0.6.20", default-features = false, features = ["http1", "json", "original-uri", "query", "tokio", "headers", "tracing"]}
 clap = {version = "4.4.6", features = ["derive"]}
 figment = {version = "0.10.10", features = ["yaml"]}
 humantime-serde = "1.1.1"
+hyper = { version = "0.14.27", features = ["client", "server", "http1", "runtime"] }
 once_cell = "1.18.0"
 regex = "1.9.6"
 serde = {version = "1.0.188", features = ["derive"]}
