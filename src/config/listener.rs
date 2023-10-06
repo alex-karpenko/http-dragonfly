@@ -2,11 +2,45 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
 };
-use std::{fmt::Display, net::Ipv4Addr, str::FromStr};
+use std::{fmt::Display, net::Ipv4Addr, str::FromStr, time::Duration};
+
+use super::{headers::HeaderTransform, response::ResponseConfig, target::TargetConfig};
 
 const DEFAULT_LISTENER_PORT: u16 = 8080;
 pub const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
 const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ListenerConfig {
+    name: Option<String>,
+    #[serde(rename = "on", default)]
+    listen_on: ListenOn,
+    #[serde(
+        with = "humantime_serde",
+        default = "ListenerConfig::default_listener_timeout"
+    )]
+    timeout: Duration,
+    headers: Option<Vec<HeaderTransform>>,
+    methods: Option<Vec<String>>,
+    pub targets: Vec<TargetConfig>,
+    #[serde(default)]
+    pub response: ResponseConfig,
+}
+
+impl ListenerConfig {
+    fn default_listener_timeout() -> Duration {
+        Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
+    }
+
+    pub fn get_name(&self) -> String {
+        if let Some(name) = &self.name {
+            name.clone()
+        } else {
+            format!("LISTENER-{}", self.listen_on)
+        }
+    }
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]

@@ -33,7 +33,6 @@ default = "deny"
 confidence-threshold = 0.93
 exceptions = [
     { allow = ["Unicode-DFS-2016"], name = "unicode-ident" },
-    { allow = ["BSD-3-Clause"], name = "matchit" },
     # { allow = ["Zlib"], name = "tinyvec" },
     # { allow = ["BSD-3-Clause"], name = "subtle" },
     # { allow = ["BSD-3-Clause"], name = "encoding_rs" },

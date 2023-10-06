@@ -5,7 +5,7 @@ WORKDIR /src
 COPY . .
 
 RUN cargo build --release
-RUN strip target/release/http-splitter
+RUN strip target/release/http-dragonfly
 
 # Runtime stage
 FROM debian:12-slim
@@ -14,7 +14,7 @@ RUN apt update && apt install -y ca-certificates && apt clean
 
 USER nobody
 WORKDIR /app
-COPY --from=builder /src/target/release/http-splitter /app/
+COPY --from=builder /src/target/release/http-dragonfly /app/
 
-ENTRYPOINT ["/app/http-splitter"]
+ENTRYPOINT ["/app/http-dragonfly"]
 CMD ["--help"]

@@ -64,3 +64,9 @@ impl<'a> Context<'a> {
         }
     }
 }
+
+pub trait HasContext {
+    fn context(&self) -> ContextMap {
+        ContextMap::new()
+    }
+}
