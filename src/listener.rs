@@ -1,0 +1,3 @@
+trait Listener {
+    type ListenerType;
+}

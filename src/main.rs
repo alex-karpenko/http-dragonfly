@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod context;
 mod errors;
+mod listener;
 
 use cli::CliConfig;
 use config::AppConfig;

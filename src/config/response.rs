@@ -6,7 +6,7 @@ use serde::{
 };
 use std::fmt::Display;
 
-use crate::errors::HttpSplitterError;
+use crate::errors::HttpDragonflyError;
 
 use super::headers::HeaderTransform;
 
@@ -100,7 +100,7 @@ impl<'de> Deserialize<'de> for ResponseStatus {
 }
 
 impl ResponseStatus {
-    fn from_str(v: &str) -> Result<Self, HttpSplitterError> {
+    fn from_str(v: &str) -> Result<Self, HttpDragonflyError> {
         let re = Regex::new(r"^(?P<code>\d{3})\s*(?P<msg>.*)$")
             .unwrap_or_else(|e| panic!("looks like a BUG: {e}"));
         let caps = re.captures(v);
@@ -109,7 +109,7 @@ impl ResponseStatus {
             let code: u16 =
                 caps["code"]
                     .parse()
-                    .map_err(|_e| HttpSplitterError::ParseConfigFile {
+                    .map_err(|_e| HttpDragonflyError::ParseConfigFile {
                         cause: Error::from(String::from("invalid status string")),
                     })?;
             let msg: Option<String> = match &caps["msg"] {
@@ -119,7 +119,7 @@ impl ResponseStatus {
 
             Ok(Self { code, msg })
         } else {
-            Err(HttpSplitterError::ParseConfigFile {
+            Err(HttpDragonflyError::ParseConfigFile {
                 cause: Error::from(String::from("invalid status string")),
             })
         }
