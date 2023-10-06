@@ -13,11 +13,13 @@ use super::headers::HeaderTransform;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields, default)]
 pub struct ResponseConfig {
-    strategy: ResponseStrategy,
+    pub strategy: ResponseStrategy,
     target_selector: ResponseTargetSelector,
     failure_status_regex: String,
-    failure_on_timeout: bool,
+    timeout_failure: bool,
     timeout_status: ResponseStatus,
+    no_target_failure: bool,
+    no_target_status: ResponseStatus,
     cancel_unneeded_targets: bool,
     #[serde(rename = "override")]
     override_config: Option<OverrideConfig>,
@@ -29,8 +31,10 @@ impl Default for ResponseConfig {
             strategy: Default::default(),
             target_selector: Default::default(),
             failure_status_regex: "4\\d{2}|5\\d{2}".into(),
-            failure_on_timeout: true,
+            timeout_failure: true,
             timeout_status: "504 Gateway Timeout".into(),
+            no_target_failure: true,
+            no_target_status: "500 No valid target".into(),
             cancel_unneeded_targets: false,
             override_config: None,
         }
@@ -39,7 +43,7 @@ impl Default for ResponseConfig {
 
 #[derive(Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
-enum ResponseStrategy {
+pub enum ResponseStrategy {
     AlwaysOverride,
     AlwaysTargetId,
     OkThenFailed,
@@ -49,6 +53,7 @@ enum ResponseStrategy {
     FailedThenTargetId,
     #[default]
     FailedThenOverride,
+    ConditionalTargetId,
 }
 
 #[derive(Deserialize, Debug, Default)]

@@ -33,6 +33,23 @@ impl AppConfig {
         let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
 
         debug!("Application config: {:#?}", config);
-        Ok(config)
+        config.validate()
+    }
+
+    fn validate(self) -> Result<AppConfig, HttpDragonflyError> {
+        for listener in &self.listeners {
+            match listener.response.strategy {
+                response::ResponseStrategy::ConditionalTargetId => {
+                    // Make sure that all targets have condition defined if strategy is conditional_target_id
+                    if listener.targets.iter().any(|t| t.condition.is_none()) {
+                        return Err(HttpDragonflyError::InvalidConfig {
+                            cause: format!("all targets of the listener `{}` must have condition defined because strategy is `conditional_target_id`", listener.get_name()),
+                        });
+                    }
+                }
+                _ => {}
+            };
+        }
+        Ok(self)
     }
 }

@@ -23,9 +23,9 @@ pub struct ListenerConfig {
     timeout: Duration,
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
-    targets: Vec<TargetConfig>,
+    pub targets: Vec<TargetConfig>,
     #[serde(default)]
-    response: ResponseConfig,
+    pub response: ResponseConfig,
 }
 
 impl ListenerConfig {
@@ -33,9 +33,9 @@ impl ListenerConfig {
         Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
     }
 
-    pub fn get_name(self) -> String {
-        if let Some(name) = self.name {
-            name
+    pub fn get_name(&self) -> String {
+        if let Some(name) = &self.name {
+            name.clone()
         } else {
             format!("LISTENER-{}", self.listen_on)
         }

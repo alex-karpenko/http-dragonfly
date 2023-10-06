@@ -10,6 +10,8 @@ pub enum HttpDragonflyError {
         #[from]
         cause: figment::Error,
     },
+    #[error("invalid config: {}", .cause)]
+    InvalidConfig { cause: String },
 }
 
 impl std::fmt::Debug for HttpDragonflyError {

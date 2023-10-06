@@ -18,6 +18,7 @@ pub struct TargetConfig {
         default = "TargetConfig::default_target_timeout"
     )]
     timeout: Duration,
+    pub condition: Option<String>,
 }
 
 impl TargetConfig {
