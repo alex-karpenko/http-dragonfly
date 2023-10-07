@@ -28,13 +28,10 @@ impl<'a> Context<'a> {
                 ctx.insert(k, v);
             });
 
-            let ctx = Context {
+            Context {
                 own: ctx,
                 parent: None,
-            };
-
-            debug!("Construct new root context: {:#?}", ctx);
-            ctx
+            }
         });
 
         ctx

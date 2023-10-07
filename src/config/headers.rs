@@ -5,13 +5,13 @@ use serde::{
 
 #[derive(Debug)]
 pub struct HeaderTransform {
-    action: HeaderTransformActon,
-    value: Option<String>,
+    pub action: HeaderTransformActon,
+    pub value: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
-enum HeaderTransformActon {
+pub enum HeaderTransformActon {
     Add(String),
     Replace(String),
     Drop(String),

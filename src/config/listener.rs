@@ -2,7 +2,12 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
 };
-use std::{fmt::Display, net::Ipv4Addr, str::FromStr, time::Duration};
+use std::{
+    fmt::Display,
+    net::{Ipv4Addr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
 
 use super::{headers::HeaderTransform, response::ResponseConfig, target::TargetConfig};
 
@@ -15,13 +20,13 @@ const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 pub struct ListenerConfig {
     name: Option<String>,
     #[serde(rename = "on", default)]
-    listen_on: ListenOn,
+    pub listen_on: ListenOn,
     #[serde(
         with = "humantime_serde",
         default = "ListenerConfig::default_listener_timeout"
     )]
-    timeout: Duration,
-    headers: Option<Vec<HeaderTransform>>,
+    pub timeout: Duration,
+    pub headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
     pub targets: Vec<TargetConfig>,
     #[serde(default)]
@@ -38,6 +43,19 @@ impl ListenerConfig {
             name.clone()
         } else {
             format!("LISTENER-{}", self.listen_on)
+        }
+    }
+
+    pub fn get_socket(&self) -> SocketAddr {
+        self.listen_on.as_socket()
+    }
+
+    pub fn is_method_allowed(&self, method: &str) -> bool {
+        if let Some(methods) = &self.methods {
+            let method = method.to_lowercase();
+            methods.contains(&method)
+        } else {
+            true
         }
     }
 }
@@ -58,6 +76,12 @@ pub enum HttpMethod {
 pub struct ListenOn {
     ip: Ipv4Addr,
     port: u16,
+}
+
+impl ListenOn {
+    fn as_socket(&self) -> SocketAddr {
+        SocketAddr::new(self.ip.into(), self.port)
+    }
 }
 
 impl Default for ListenOn {

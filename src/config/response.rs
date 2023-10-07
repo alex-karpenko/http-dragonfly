@@ -14,7 +14,7 @@ use super::headers::HeaderTransform;
 #[serde(deny_unknown_fields, default)]
 pub struct ResponseConfig {
     pub strategy: ResponseStrategy,
-    target_selector: ResponseTargetSelector,
+    pub target_selector: Option<String>,
     failure_status_regex: String,
     timeout_failure: bool,
     timeout_status: ResponseStatus,
@@ -53,16 +53,27 @@ pub enum ResponseStrategy {
     FailedThenTargetId,
     #[default]
     FailedThenOverride,
-    ConditionalTargetId,
+    ConditionalRouting,
 }
 
-#[derive(Deserialize, Debug, Default)]
-#[serde(deny_unknown_fields, rename_all = "snake_case")]
-enum ResponseTargetSelector {
-    #[default]
-    Fastest,
-    Slowest,
-    Random,
+impl Display for ResponseStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ResponseStrategy::AlwaysOverride => "always_override",
+                ResponseStrategy::AlwaysTargetId => "always_target_id",
+                ResponseStrategy::OkThenFailed => "ok_then_failed",
+                ResponseStrategy::OkThenTargetId => "ok_then_target_id",
+                ResponseStrategy::OkThenOverride => "ok_then_override",
+                ResponseStrategy::FailedThenOk => "failed_then_ok",
+                ResponseStrategy::FailedThenTargetId => "failed_then_target_id",
+                ResponseStrategy::FailedThenOverride => "failed_then_override",
+                ResponseStrategy::ConditionalRouting => "conditional_routing",
+            }
+        )
+    }
 }
 
 #[derive(Deserialize, Debug)]
