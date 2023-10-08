@@ -58,6 +58,8 @@ impl Listener {
         );
 
         let mut requests = vec![];
+        let http_client = Client::new();
+
         for target in &cfg.targets {
             let ctx = Listener::target_context(target, &ctx);
             let target_request_builder = Request::builder();
@@ -93,7 +95,7 @@ impl Listener {
 
             // Make a call
             debug!("target `{}` request: {:?}", target.get_id(), target_request);
-            requests.push(Client::new().request(target_request));
+            requests.push(http_client.request(target_request));
 
             //debug!("target `{}` context: {:?}", target.get_id(), ctx);
         }
