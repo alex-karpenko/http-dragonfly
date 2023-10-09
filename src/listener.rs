@@ -1,21 +1,17 @@
 use futures_util::future::join_all;
 use http::{request::Parts, Error, HeaderValue};
-use hyper::{
-    body, header::HOST, http, Body, Client, HeaderMap, Request, Response, StatusCode, Uri,
-};
+use hyper::{header::HOST, http, Body, Client, HeaderMap, Request, Response, StatusCode, Uri};
 use shellexpand::env_with_context_no_errors;
-use std::{net::SocketAddr, time::Duration};
+use std::net::SocketAddr;
 use tracing::debug;
 
 use crate::{
     config::{
-        headers::{self, HeaderTransform, HeaderTransformActon},
+        headers::{HeaderTransform, HeaderTransformActon},
         listener::ListenerConfig,
-        response::{ResponseConfig, ResponseStrategy},
-        target::{self, TargetConfig},
+        target::TargetConfig,
     },
     context::{Context, ContextMap},
-    errors::HttpDragonflyError,
 };
 
 pub struct Listener {}
@@ -100,7 +96,12 @@ impl Listener {
             //debug!("target `{}` context: {:?}", target.get_id(), ctx);
         }
         let results = join_all(requests).await;
-        debug!("{:#?}", results);
+        for res in results {
+            match res {
+                Ok(resp) => debug!("OK: {:#?}", resp),
+                Err(e) => debug!("ERR: {:#?}", e),
+            }
+        }
 
         let resp = { Response::new(Body::from("process_all_targets: dummy\n")) };
 

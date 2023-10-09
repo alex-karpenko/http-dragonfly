@@ -87,7 +87,7 @@ impl<'de> Deserialize<'de> for HeaderTransform {
                         HeaderTransformActon::Drop(_) => {
                             if value.is_some() {
                                 return Err(de::Error::custom(
-                                    "unknown field value in action drop",
+                                    "unknown field `value` in action drop",
                                 ));
                             }
                         }
