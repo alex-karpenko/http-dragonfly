@@ -1,21 +1,21 @@
 use futures_util::future::join_all;
 use http::{request::Parts, Error, HeaderValue};
 use hyper::{
-    body, header::HOST, http, Body, Client, HeaderMap, Request, Response, StatusCode, Uri,
+    header::HOST, http, Body, Client, Error as HyperError, HeaderMap, Request, Response,
+    StatusCode, Uri,
 };
 use shellexpand::env_with_context_no_errors;
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, collections::HashMap};
 use tracing::debug;
 
 use crate::{
     config::{
-        headers::{self, HeaderTransform, HeaderTransformActon},
+        headers::{HeaderTransform, HeaderTransformActon},
         listener::ListenerConfig,
-        response::{ResponseConfig, ResponseStrategy},
-        target::{self, TargetConfig},
+        response::{OverrideConfig, ResponseStatus, ResponseStrategy},
+        target::{TargetConfig, TargetOnErrorAction},
     },
     context::{Context, ContextMap},
-    errors::HttpDragonflyError,
 };
 
 pub struct Listener {}
@@ -57,11 +57,14 @@ impl Listener {
             cfg.response.strategy
         );
 
-        let mut requests = vec![];
+        let mut target_requests = vec![];
+        let mut target_ctx = vec![];
+        let mut target_ids: HashMap<String, usize> = HashMap::new();
+
         let http_client = Client::new();
 
-        for target in &cfg.targets {
-            let ctx = Listener::target_context(target, &ctx);
+        for (pos, target) in cfg.targets.iter().enumerate() {
+            let ctx = Listener::target_context(&target, &ctx);
             let target_request_builder = Request::builder();
             // Set method
             let target_request_builder = target_request_builder.method(&req_parts.method);
@@ -93,16 +96,56 @@ impl Listener {
                 target_request_builder.body(Body::from(body_bytes.clone()))?
             };
 
-            // Make a call
+            // Put request to queue
             debug!("target `{}` request: {:?}", target.get_id(), target_request);
-            requests.push(http_client.request(target_request));
-
-            //debug!("target `{}` context: {:?}", target.get_id(), ctx);
+            target_requests.push(http_client.request(target_request));
+            target_ctx.push(ctx);
+            target_ids.insert(target.get_id(), pos);
         }
-        let results = join_all(requests).await;
-        debug!("{:#?}", results);
 
-        let resp = { Response::new(Body::from("process_all_targets: dummy\n")) };
+        // Get results
+        let results: Vec<Result<Response<Body>, HyperError>> = join_all(target_requests).await;
+        // Pre-process results
+        let mut responses = vec![];
+        for (pos, res) in results.into_iter().enumerate() {
+            match res {
+                Ok(resp) => {
+                    debug!("OK: {:#?}", resp);
+                    responses.push(Some(resp))
+                }
+                Err(e) => {
+                    debug!("ERR: {:#?}", e);
+                    let target = &cfg.targets[pos];
+                    let resp = match target.on_error {
+                        TargetOnErrorAction::Propagate => {
+                            Some(Listener::build_on_error_response(e, &target.error_status))
+                        }
+                        TargetOnErrorAction::Status => {
+                            Some(Listener::build_on_error_response(e, &target.error_status))
+                        }
+                        TargetOnErrorAction::Drop => None,
+                    };
+                    responses.push(resp);
+                }
+            }
+        }
+
+        // Select response according to strategy
+        let resp = match &cfg.response.strategy {
+            ResponseStrategy::AlwaysOverride => Listener::override_response(
+                Response::new(Body::empty()),
+                &ctx,
+                &cfg.response.override_config,
+            ),
+            ResponseStrategy::AlwaysTargetId => todo!(),
+            ResponseStrategy::OkThenFailed => todo!(),
+            ResponseStrategy::OkThenTargetId => todo!(),
+            ResponseStrategy::OkThenOverride => todo!(),
+            ResponseStrategy::FailedThenOk => todo!(),
+            ResponseStrategy::FailedThenTargetId => todo!(),
+            ResponseStrategy::FailedThenOverride => todo!(),
+            ResponseStrategy::ConditionalRouting => todo!(),
+        };
 
         // Final response
         Ok(resp)
@@ -189,6 +232,64 @@ impl Listener {
                     }
                 }
             };
+        }
+    }
+
+    fn build_on_error_response(e: HyperError, status: &Option<ResponseStatus>) -> Response<Body> {
+        let resp = Response::builder();
+
+        let resp = if let Some(status) = status {
+            resp.status(status.get_code())
+        } else if e.is_connect() || e.is_closed() {
+            resp.status(502)
+        } else if e.is_timeout() {
+            resp.status(504)
+        } else {
+            resp.status(500)
+        };
+
+        resp.body(Body::empty()).unwrap()
+    }
+
+    fn override_response(
+        resp: Response<Body>,
+        ctx: &Context,
+        cfg: &'static Option<OverrideConfig>,
+    ) -> Response<Body> {
+        if let Some(cfg) = cfg {
+            let (resp_parts, resp_body) = resp.into_parts();
+            let mut new_resp = Response::builder();
+
+            // Set status
+            new_resp = if let Some(status) = &cfg.status {
+                new_resp.status(status.get_code())
+            } else {
+                new_resp.status(resp_parts.status)
+            };
+
+            // Prepare headers
+            let mut headers = resp_parts.headers.clone();
+            //let cfg_headers = cfg.headers.clone();
+            if let Some(transforms) = &cfg.headers {
+                Listener::transform_headers(&mut headers, transforms, ctx);
+            }
+            for (k, v) in &headers {
+                new_resp = new_resp.header(k, v);
+            }
+
+            // Prepare body
+            let cfg_body = cfg.body.clone();
+            let body: Body = if let Some(body) = cfg_body {
+                let body: String = env_with_context_no_errors(&body, |v| ctx.get(&v.into())).into();
+                Body::from(body)
+            } else {
+                resp_body
+            };
+
+            // Final response
+            new_resp.body(body).unwrap()
+        } else {
+            resp
         }
     }
 }

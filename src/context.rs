@@ -1,7 +1,6 @@
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::env;
-use tracing::debug;
 
 const CTX_APP_NAME: &str = env!("CARGO_PKG_NAME");
 const CTX_APP_VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -10,12 +10,16 @@ use figment::{
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
-use std::fs::read_to_string;
+use std::{collections::HashSet, fs::read_to_string};
 use tracing::{debug, info};
 
 use crate::{context::Context, errors::HttpDragonflyError};
 
-use self::{listener::ListenerConfig, response::ResponseStrategy, target::TargetConfig};
+use self::{
+    listener::ListenerConfig,
+    response::ResponseStrategy,
+    target::{TargetConfig, TargetOnErrorAction},
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -45,6 +49,18 @@ impl<'a> AppConfig {
 
     fn validate(self) -> Result<AppConfig, HttpDragonflyError> {
         for listener in &self.listeners {
+            // Make sure all target IDs are unique
+            let ids: HashSet<String> = listener.targets.iter().map(TargetConfig::get_id).collect();
+            if ids.len() != listener.targets.len() {
+                return Err(HttpDragonflyError::InvalidConfig {
+                    cause: format!(
+                        "all target IDs of the listener `{}` should be unique",
+                        listener.get_name()
+                    ),
+                });
+            }
+
+            //if listener.targets.len() !=
             match listener.response.strategy {
                 ResponseStrategy::ConditionalRouting => {
                     // Make sure that all targets have condition defined if strategy is conditional_routing
@@ -77,8 +93,29 @@ impl<'a> AppConfig {
 
             // Validate URLs
             for url in listener.targets.iter().map(TargetConfig::get_uri) {
+                #[allow(clippy::question_mark)]
                 if let Err(e) = url {
                     return Err(e);
+                }
+            }
+
+            // Validate target's error response override
+            for target in &listener.targets {
+                match target.on_error {
+                    TargetOnErrorAction::Propagate | TargetOnErrorAction::Drop => {
+                        if target.error_status.is_some() {
+                            return Err(HttpDragonflyError::InvalidConfig {
+                                cause: format!("`error_status` can be set if `on_error` is `status` only, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                            });
+                        }
+                    }
+                    TargetOnErrorAction::Status => {
+                        if target.error_status.is_none() {
+                            return Err(HttpDragonflyError::InvalidConfig {
+                            cause: format!("`error_status` should be set if `on_error` is `status`, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                        });
+                        }
+                    }
                 }
             }
         }

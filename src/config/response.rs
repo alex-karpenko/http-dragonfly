@@ -15,14 +15,10 @@ use super::headers::HeaderTransform;
 pub struct ResponseConfig {
     pub strategy: ResponseStrategy,
     pub target_selector: Option<String>,
-    failure_status_regex: String,
-    timeout_failure: bool,
-    timeout_status: ResponseStatus,
-    no_target_failure: bool,
-    no_target_status: ResponseStatus,
-    cancel_unneeded_targets: bool,
+    failed_status_regex: String,
+    no_targets_status: ResponseStatus,
     #[serde(rename = "override")]
-    override_config: Option<OverrideConfig>,
+    pub override_config: Option<OverrideConfig>,
 }
 
 impl Default for ResponseConfig {
@@ -30,12 +26,8 @@ impl Default for ResponseConfig {
         Self {
             strategy: Default::default(),
             target_selector: Default::default(),
-            failure_status_regex: "4\\d{2}|5\\d{2}".into(),
-            timeout_failure: true,
-            timeout_status: "504 Gateway Timeout".into(),
-            no_target_failure: true,
-            no_target_status: "500 No valid target".into(),
-            cancel_unneeded_targets: false,
+            failed_status_regex: "4\\d{2}|5\\d{2}".into(),
+            no_targets_status: "500 No valid targets".into(),
             override_config: None,
         }
     }
@@ -78,14 +70,14 @@ impl Display for ResponseStrategy {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct OverrideConfig {
-    status: Option<ResponseStatus>,
-    body: Option<String>,
-    headers: Option<Vec<HeaderTransform>>,
+pub struct OverrideConfig {
+    pub status: Option<ResponseStatus>,
+    pub body: Option<String>,
+    pub headers: Option<Vec<HeaderTransform>>,
 }
 
 #[derive(Debug)]
-struct ResponseStatus {
+pub struct ResponseStatus {
     code: u16,
     msg: Option<String>,
 }
@@ -139,6 +131,10 @@ impl ResponseStatus {
                 cause: Error::from(String::from("invalid status string")),
             })
         }
+    }
+
+    pub fn get_code(&self) -> u16 {
+        self.code
     }
 }
 
