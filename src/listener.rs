@@ -5,7 +5,7 @@ use hyper::{
     StatusCode, Uri,
 };
 use shellexpand::env_with_context_no_errors;
-use std::{net::SocketAddr, collections::HashMap};
+use std::{collections::HashMap, net::SocketAddr};
 use tracing::debug;
 
 use crate::{
@@ -64,7 +64,7 @@ impl Listener {
         let http_client = Client::new();
 
         for (pos, target) in cfg.targets.iter().enumerate() {
-            let ctx = Listener::target_context(&target, &ctx);
+            let ctx = Listener::target_context(target, &ctx);
             let target_request_builder = Request::builder();
             // Set method
             let target_request_builder = target_request_builder.method(&req_parts.method);

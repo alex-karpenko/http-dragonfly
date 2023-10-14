@@ -98,6 +98,26 @@ impl<'a> AppConfig {
                     return Err(e);
                 }
             }
+
+            // Validate target's error response override
+            for target in &listener.targets {
+                match target.on_error {
+                    TargetOnErrorAction::Propagate | TargetOnErrorAction::Drop => {
+                        if target.error_status.is_some() {
+                            return Err(HttpDragonflyError::InvalidConfig {
+                                cause: format!("`error_status` can be set if `on_error` is `status` only, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                            });
+                        }
+                    }
+                    TargetOnErrorAction::Status => {
+                        if target.error_status.is_none() {
+                            return Err(HttpDragonflyError::InvalidConfig {
+                            cause: format!("`error_status` should be set if `on_error` is `status`, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                        });
+                        }
+                    }
+                }
+            }
         }
         Ok(self)
     }
