@@ -140,10 +140,11 @@ impl Listener {
                 let target_id = cfg.response.target_selector.clone().unwrap();
                 let (resp, ctx) = responses.remove(&target_id).unwrap();
                 if let Some(resp) = resp {
-                    Listener::override_response(resp, ctx, &cfg.response.override_config)
+                    let ctx = Listener::response_context(&resp, ctx);
+                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
                 } else {
                     let empty = Response::builder().status(500).body(Body::empty()).unwrap();
-                    Listener::override_response(empty, ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
             ResponseStrategy::OkThenFailed => todo!(),
@@ -209,6 +210,21 @@ impl Listener {
                 .to_lowercase()
                 .to_string(),
         );
+
+        ctx.with(own)
+    }
+
+    fn response_context<'a>(resp: &Response<Body>, ctx: &'a Context) -> Context<'a> {
+        let mut own = ContextMap::new();
+
+        // CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME>
+        // CTX_RESPONSE_STATUS
+        own.insert("CTX_RESPONSE_STATUS".into(), resp.status().to_string());
+        resp.headers().iter().for_each(|(n, v)| {
+            let n = n.as_str().to_uppercase().replace('-', "_");
+            let v = v.to_str().unwrap_or("").to_string();
+            own.insert(format!("CTX_RESPONSE_HEADERS_{n}"), v);
+        });
 
         ctx.with(own)
     }
