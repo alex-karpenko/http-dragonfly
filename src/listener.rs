@@ -59,11 +59,11 @@ impl Listener {
 
         let mut target_requests = vec![];
         let mut target_ctx = vec![];
-        let mut target_ids: HashMap<String, usize> = HashMap::new();
+        let mut target_ids = vec![];
 
         let http_client = Client::new();
 
-        for (pos, target) in cfg.targets.iter().enumerate() {
+        for target in &cfg.targets {
             let ctx = Listener::target_context(target, &ctx);
             let target_request_builder = Request::builder();
             // Set method
@@ -100,18 +100,18 @@ impl Listener {
             debug!("target `{}` request: {:?}", target.get_id(), target_request);
             target_requests.push(http_client.request(target_request));
             target_ctx.push(ctx);
-            target_ids.insert(target.get_id(), pos);
+            target_ids.push(target.get_id());
         }
 
         // Get results
         let results: Vec<Result<Response<Body>, HyperError>> = join_all(target_requests).await;
         // Pre-process results
-        let mut responses = vec![];
+        let mut responses: HashMap<String, (Option<Response<Body>>, &Context)> = HashMap::new();
         for (pos, res) in results.into_iter().enumerate() {
             match res {
                 Ok(resp) => {
                     debug!("OK: {:#?}", resp);
-                    responses.push(Some(resp))
+                    responses.insert(target_ids[pos].clone(), (Some(resp), &target_ctx[pos]));
                 }
                 Err(e) => {
                     debug!("ERR: {:#?}", e);
@@ -125,19 +125,27 @@ impl Listener {
                         }
                         TargetOnErrorAction::Drop => None,
                     };
-                    responses.push(resp);
+                    responses.insert(target_ids[pos].clone(), (resp, &target_ctx[pos]));
                 }
             }
         }
 
         // Select response according to strategy
         let resp = match &cfg.response.strategy {
-            ResponseStrategy::AlwaysOverride => Listener::override_response(
-                Response::new(Body::empty()),
-                &ctx,
-                &cfg.response.override_config,
-            ),
-            ResponseStrategy::AlwaysTargetId => todo!(),
+            ResponseStrategy::AlwaysOverride => {
+                let empty = Response::new(Body::empty());
+                Listener::override_response(empty, &ctx, &cfg.response.override_config)
+            }
+            ResponseStrategy::AlwaysTargetId => {
+                let target_id = cfg.response.target_selector.clone().unwrap();
+                let (resp, ctx) = responses.remove(&target_id).unwrap();
+                if let Some(resp) = resp {
+                    Listener::override_response(resp, ctx, &cfg.response.override_config)
+                } else {
+                    let empty = Response::builder().status(500).body(Body::empty()).unwrap();
+                    Listener::override_response(empty, ctx, &cfg.response.override_config)
+                }
+            }
             ResponseStrategy::OkThenFailed => todo!(),
             ResponseStrategy::OkThenTargetId => todo!(),
             ResponseStrategy::OkThenOverride => todo!(),
