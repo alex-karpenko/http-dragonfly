@@ -4,6 +4,7 @@ use hyper::{
     header::HOST, http, Body, Client, Error as HyperError, HeaderMap, Request, Response,
     StatusCode, Uri,
 };
+use regex::Regex;
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
 use tracing::debug;
@@ -18,6 +19,7 @@ use crate::{
     context::{Context, ContextMap},
 };
 
+type ResponsesMap<'a> = HashMap<String, (Option<Response<Body>>, &'a Context<'a>)>;
 pub struct Listener {}
 
 impl Listener {
@@ -106,7 +108,7 @@ impl Listener {
         // Get results
         let results: Vec<Result<Response<Body>, HyperError>> = join_all(target_requests).await;
         // Pre-process results
-        let mut responses: HashMap<String, (Option<Response<Body>>, &Context)> = HashMap::new();
+        let mut responses: ResponsesMap = ResponsesMap::new();
         for (pos, res) in results.into_iter().enumerate() {
             match res {
                 Ok(resp) => {
@@ -143,16 +145,43 @@ impl Listener {
                     let ctx = Listener::response_context(&resp, ctx);
                     Listener::override_response(resp, &ctx, &cfg.response.override_config)
                 } else {
-                    let empty = Response::builder().status(500).body(Body::empty()).unwrap();
+                    let empty = Response::builder()
+                        .status(cfg.response.no_targets_status.get_code())
+                        .body(Body::empty())
+                        .unwrap();
+                    Listener::override_response(empty, ctx, &cfg.response.override_config)
+                }
+            }
+            ResponseStrategy::OkThenOverride => {
+                let ok_target_id =
+                    Listener::find_first_response(&responses, &cfg.response.failed_status_regex, false);
+                if let Some(target_id) = ok_target_id {
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    let resp = resp.unwrap();
+                    let ctx = Listener::response_context(&resp, ctx);
+                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                } else {
+                    let empty = Response::new(Body::empty());
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
-            ResponseStrategy::OkThenFailed => todo!(),
+            ResponseStrategy::FailedThenOverride => {
+                let failed_target_id =
+                    Listener::find_first_response(&responses, &cfg.response.failed_status_regex, true);
+                if let Some(target_id) = failed_target_id {
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    let resp = resp.unwrap();
+                    let ctx = Listener::response_context(&resp, ctx);
+                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                } else {
+                    let empty = Response::new(Body::empty());
+                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                }
+            }
             ResponseStrategy::OkThenTargetId => todo!(),
-            ResponseStrategy::OkThenOverride => todo!(),
-            ResponseStrategy::FailedThenOk => todo!(),
             ResponseStrategy::FailedThenTargetId => todo!(),
-            ResponseStrategy::FailedThenOverride => todo!(),
+            ResponseStrategy::OkThenFailed => todo!(),
+            ResponseStrategy::FailedThenOk => todo!(),
             ResponseStrategy::ConditionalRouting => todo!(),
         };
 
@@ -315,5 +344,21 @@ impl Listener {
         } else {
             resp
         }
+    }
+
+    fn find_first_response(responses: &ResponsesMap, failed_status_regex: &str, is_failed: bool) -> Option<String> {
+        let re = Regex::new(failed_status_regex).unwrap();
+        for key in responses.keys() {
+            let (resp, _) = responses.get(key).unwrap();
+            if let Some(resp) = resp {
+                let status: String = resp.status().to_string();
+                if re.is_match(&status) == is_failed{
+                    // Return first non-failed response target_id
+                    return Some(key.into());
+                }
+            }
+        }
+
+        None
     }
 }

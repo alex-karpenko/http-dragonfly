@@ -15,8 +15,8 @@ use super::headers::HeaderTransform;
 pub struct ResponseConfig {
     pub strategy: ResponseStrategy,
     pub target_selector: Option<String>,
-    failed_status_regex: String,
-    no_targets_status: ResponseStatus,
+    pub failed_status_regex: String,
+    pub no_targets_status: ResponseStatus,
     #[serde(rename = "override")]
     pub override_config: Option<OverrideConfig>,
 }
