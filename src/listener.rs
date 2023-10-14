@@ -153,8 +153,11 @@ impl Listener {
                 }
             }
             ResponseStrategy::OkThenOverride => {
-                let ok_target_id =
-                    Listener::find_first_response(&responses, &cfg.response.failed_status_regex, false);
+                let ok_target_id = Listener::find_first_response(
+                    &responses,
+                    &cfg.response.failed_status_regex,
+                    false,
+                );
                 if let Some(target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     let resp = resp.unwrap();
@@ -166,8 +169,11 @@ impl Listener {
                 }
             }
             ResponseStrategy::FailedThenOverride => {
-                let failed_target_id =
-                    Listener::find_first_response(&responses, &cfg.response.failed_status_regex, true);
+                let failed_target_id = Listener::find_first_response(
+                    &responses,
+                    &cfg.response.failed_status_regex,
+                    true,
+                );
                 if let Some(target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     let resp = resp.unwrap();
@@ -346,13 +352,17 @@ impl Listener {
         }
     }
 
-    fn find_first_response(responses: &ResponsesMap, failed_status_regex: &str, is_failed: bool) -> Option<String> {
+    fn find_first_response(
+        responses: &ResponsesMap,
+        failed_status_regex: &str,
+        is_failed: bool,
+    ) -> Option<String> {
         let re = Regex::new(failed_status_regex).unwrap();
         for key in responses.keys() {
             let (resp, _) = responses.get(key).unwrap();
             if let Some(resp) = resp {
                 let status: String = resp.status().to_string();
-                if re.is_match(&status) == is_failed{
+                if re.is_match(&status) == is_failed {
                     // Return first non-failed response target_id
                     return Some(key.into());
                 }
