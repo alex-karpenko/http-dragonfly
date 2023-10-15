@@ -132,7 +132,7 @@ impl Listener {
             }
         }
 
-        // Select response according to strategy
+        // Select/create response according to strategy
         let resp = match &cfg.response.strategy {
             ResponseStrategy::AlwaysOverride => {
                 let empty = Response::new(Body::empty());
@@ -184,8 +184,58 @@ impl Listener {
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
-            ResponseStrategy::OkThenTargetId => todo!(),
-            ResponseStrategy::FailedThenTargetId => todo!(),
+            ResponseStrategy::OkThenTargetId => {
+                let ok_target_id = Listener::find_first_response(
+                    &responses,
+                    &cfg.response.failed_status_regex,
+                    false,
+                );
+                if let Some(target_id) = ok_target_id {
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    let resp = resp.unwrap();
+                    let ctx = Listener::response_context(&resp, ctx);
+                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                } else {
+                    let target_id = cfg.response.target_selector.clone().unwrap();
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    if let Some(resp) = resp {
+                        let ctx = Listener::response_context(&resp, ctx);
+                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    } else {
+                        let empty = Response::builder()
+                            .status(cfg.response.no_targets_status.get_code())
+                            .body(Body::empty())
+                            .unwrap();
+                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                    }
+                }
+            }
+            ResponseStrategy::FailedThenTargetId => {
+                let failed_target_id = Listener::find_first_response(
+                    &responses,
+                    &cfg.response.failed_status_regex,
+                    true,
+                );
+                if let Some(target_id) = failed_target_id {
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    let resp = resp.unwrap();
+                    let ctx = Listener::response_context(&resp, ctx);
+                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                } else {
+                    let target_id = cfg.response.target_selector.clone().unwrap();
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    if let Some(resp) = resp {
+                        let ctx = Listener::response_context(&resp, ctx);
+                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    } else {
+                        let empty = Response::builder()
+                            .status(cfg.response.no_targets_status.get_code())
+                            .body(Body::empty())
+                            .unwrap();
+                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                    }
+                }
+            }
             ResponseStrategy::OkThenFailed => todo!(),
             ResponseStrategy::FailedThenOk => todo!(),
             ResponseStrategy::ConditionalRouting => todo!(),
