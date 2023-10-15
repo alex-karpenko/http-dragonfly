@@ -152,8 +152,7 @@ impl Listener {
                 } else {
                     let empty = Response::builder()
                         .status(cfg.response.no_targets_status.get_code())
-                        .body(Body::empty())
-                        .unwrap();
+                        .body(Body::empty())?;
                     Listener::override_response(empty, ctx, &cfg.response.override_config)
                 }
             }
@@ -194,8 +193,7 @@ impl Listener {
                     } else {
                         let empty = Response::builder()
                             .status(cfg.response.no_targets_status.get_code())
-                            .body(Body::empty())
-                            .unwrap();
+                            .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 }
@@ -215,8 +213,7 @@ impl Listener {
                     } else {
                         let empty = Response::builder()
                             .status(cfg.response.no_targets_status.get_code())
-                            .body(Body::empty())
-                            .unwrap();
+                            .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 }
@@ -235,15 +232,13 @@ impl Listener {
                     } else {
                         let empty = Response::builder()
                             .status(cfg.response.no_targets_status.get_code())
-                            .body(Body::empty())
-                            .unwrap();
+                            .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 } else {
                     let empty = Response::builder()
                         .status(cfg.response.no_targets_status.get_code())
-                        .body(Body::empty())
-                        .unwrap();
+                        .body(Body::empty())?;
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
@@ -261,15 +256,13 @@ impl Listener {
                     } else {
                         let empty = Response::builder()
                             .status(cfg.response.no_targets_status.get_code())
-                            .body(Body::empty())
-                            .unwrap();
+                            .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 } else {
                     let empty = Response::builder()
                         .status(cfg.response.no_targets_status.get_code())
-                        .body(Body::empty())
-                        .unwrap();
+                        .body(Body::empty())?;
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
