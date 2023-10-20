@@ -18,7 +18,7 @@ use crate::{context::Context, errors::HttpDragonflyError};
 use self::{
     listener::ListenerConfig,
     response::ResponseStrategy,
-    target::{TargetConfig, TargetOnErrorAction},
+    target::{TargetConditionConfig, TargetConfig, TargetOnErrorAction},
 };
 
 #[derive(Deserialize, Debug)]
@@ -67,6 +67,25 @@ impl<'a> AppConfig {
                     if listener.targets.iter().any(|t| t.condition.is_none()) {
                         return Err(HttpDragonflyError::InvalidConfig {
                             cause: format!("all targets of the listener `{}` must have condition defined because strategy is `{}`", listener.get_name(), listener.response.strategy),
+                        });
+                    }
+                    // Ensure singe default condition is present
+                    let default_count = listener
+                        .targets
+                        .iter()
+                        .filter(|t| {
+                            matches!(
+                                t.condition.as_ref().unwrap(),
+                                TargetConditionConfig::Default
+                            )
+                        })
+                        .count();
+                    if default_count > 1 {
+                        return Err(HttpDragonflyError::InvalidConfig {
+                            cause: format!(
+                                "more than one default target is defined of the listener `{}` but only one is allowed",
+                                listener.get_name()
+                            ),
                         });
                     }
                 }

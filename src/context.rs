@@ -59,10 +59,12 @@ impl<'a> Context<'a> {
             None
         }
     }
-}
 
-pub trait HasContext {
-    fn context(&self) -> ContextMap {
-        ContextMap::new()
+    pub fn keys(&self) -> Vec<&String> {
+        let mut keys : Vec<&String> = self.own.keys().collect();
+        if let Some(parent) = self.parent {
+            keys.append(&mut parent.keys())
+        }
+        keys
     }
 }

@@ -1,10 +1,11 @@
 use futures_util::future::join_all;
 use http::{request::Parts, Error, HeaderValue};
 use hyper::{
-    header::HOST, http, Body, Client, Error as HyperError, HeaderMap, Request, Response,
-    StatusCode, Uri,
+    body::Bytes, header::HOST, http, Body, Client, Error as HyperError, HeaderMap, Request,
+    Response, StatusCode, Uri,
 };
 use regex::Regex;
+use serde_json::{json, Value};
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
 use tracing::debug;
@@ -14,7 +15,7 @@ use crate::{
         headers::{HeaderTransform, HeaderTransformActon},
         listener::ListenerConfig,
         response::{OverrideConfig, ResponseStatus, ResponseStrategy},
-        target::{TargetConfig, TargetOnErrorAction},
+        target::{ConditionFilter, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
     context::{Context, ContextMap},
 };
@@ -37,7 +38,7 @@ impl Listener {
                 .body(Body::empty());
         }
 
-        // Prepare owned clonable body
+        // Prepare owned body
         let (req_parts, req_body) = req.into_parts();
         let body_bytes = hyper::body::to_bytes(req_body).await.unwrap();
         // Add own context - listener + request
@@ -64,8 +65,79 @@ impl Listener {
         let mut target_ids = vec![];
 
         let http_client = Client::new();
+        let mut targets: Vec<&TargetConfig> = vec![];
+        let mut conditional_target_id: Option<String> = None;
 
+        // Verify conditions
         for target in &cfg.targets {
+            match &cfg.response.strategy {
+                // Special flow in case of conditional routing
+                ResponseStrategy::ConditionalRouting => {
+                    match target.condition.as_ref().unwrap() {
+                        // Always insert default into empty targets list
+                        TargetConditionConfig::Default => {
+                            if targets.is_empty() {
+                                targets.push(target)
+                            }
+                        }
+                        TargetConditionConfig::Filter(filter) => {
+                            if Listener::check_target_condition(
+                                &ctx,
+                                &req_parts,
+                                &body_bytes,
+                                filter,
+                            ) {
+                                if targets.is_empty() {
+                                    targets.push(target)
+                                } else if matches!(
+                                    targets[0].condition.as_ref().unwrap(),
+                                    TargetConditionConfig::Default
+                                ) {
+                                    // Replace default by this target
+                                    targets.pop();
+                                    targets.push(target);
+                                } else {
+                                    // Error - more than one target has true condition
+                                    let empty = Response::builder()
+                                        .status(cfg.response.no_targets_status.get_code())
+                                        .body(Body::empty())?;
+                                    return Ok(Listener::override_response(
+                                        empty,
+                                        &ctx,
+                                        &cfg.response.override_config,
+                                    ));
+                                }
+                            }
+                        }
+                    };
+                    if !targets.is_empty() {
+                        conditional_target_id = Some(targets[0].get_id())
+                    }
+                }
+                // Any other strategy
+                _ => {
+                    if let Some(condition) = target.condition.as_ref() {
+                        match condition {
+                            TargetConditionConfig::Default => targets.push(target),
+                            TargetConditionConfig::Filter(filter) => {
+                                if Listener::check_target_condition(
+                                    &ctx,
+                                    &req_parts,
+                                    &body_bytes,
+                                    filter,
+                                ) {
+                                    targets.push(target)
+                                }
+                            }
+                        }
+                    } else {
+                        targets.push(target);
+                    }
+                }
+            }
+        }
+
+        for target in targets.iter() {
             let ctx = Listener::target_context(target, &ctx);
             let target_request_builder = Request::builder();
             // Set method
@@ -117,7 +189,7 @@ impl Listener {
                 }
                 Err(e) => {
                     debug!("ERR: {:#?}", e);
-                    let target = &cfg.targets[pos];
+                    let target = targets[pos];
                     let resp = match target.on_error {
                         TargetOnErrorAction::Propagate => {
                             Some(Listener::build_on_error_response(e, &target.error_status))
@@ -266,7 +338,25 @@ impl Listener {
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
             }
-            ResponseStrategy::ConditionalRouting => todo!(),
+            ResponseStrategy::ConditionalRouting => {
+                if let Some(target_id) = conditional_target_id {
+                    let (resp, ctx) = responses.remove(&target_id).unwrap();
+                    if let Some(resp) = resp {
+                        let ctx = Listener::response_context(&resp, ctx);
+                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    } else {
+                        let empty = Response::builder()
+                            .status(cfg.response.no_targets_status.get_code())
+                            .body(Body::empty())?;
+                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                    }
+                } else {
+                    let empty = Response::builder()
+                        .status(cfg.response.no_targets_status.get_code())
+                        .body(Body::empty())?;
+                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                }
+            }
         };
 
         // Final response
@@ -448,5 +538,46 @@ impl Listener {
         }
 
         None
+    }
+
+    fn check_target_condition(
+        ctx: &Context,
+        req: &Parts,
+        body: &Bytes,
+        filter: &ConditionFilter,
+    ) -> bool {
+        // Input content
+        // .body
+        // .env{}
+        // .request.headers{}
+        // .request.uri.full
+        // .request.uri.host
+        // .request.uri.path
+        // .request.uri.query
+        let body: Value = serde_json::from_slice(body).unwrap_or(json!({}));
+        let headers: HashMap<String, String> = req
+            .headers
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
+            .collect();
+        let env: HashMap<&String, &String> = ctx.keys().into_iter().map(|k| (k, ctx.get(k).unwrap())).collect();
+
+        let input = json!({
+            "body": body,
+            "env": env,
+            "request": {
+                "headers": headers,
+                "uri": {
+                    "full": req.uri.to_string(),
+                    "host": req.uri.host(),
+                    "path": req.uri.path(),
+                    "query": req.uri.query()
+                }
+            }
+        });
+
+        println!("{:#?}", input);
+
+        filter.run(input)
     }
 }
