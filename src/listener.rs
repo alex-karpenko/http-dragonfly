@@ -173,10 +173,12 @@ impl Listener {
             // Put request to queue
             debug!("target `{}` request: {:?}", target.get_id(), target_request);
 
-            let mut connector = HttpConnector::new();
-            connector.set_connect_timeout(Some(target.timeout));
-            let connector = HttpsConnector::new_with_connector(connector);
-            let http_client = Client::builder().build(connector);
+            // Make a connector
+            let mut http_connector = HttpConnector::new();
+            http_connector.set_connect_timeout(Some(target.timeout));
+            http_connector.enforce_http(false);
+            let https_connector = HttpsConnector::new_with_connector(http_connector);
+            let http_client = Client::builder().build(https_connector);
 
             target_requests.push(http_client.request(target_request));
             target_ctx.push(ctx);
