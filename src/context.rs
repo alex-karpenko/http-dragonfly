@@ -61,7 +61,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn keys(&self) -> Vec<&String> {
-        let mut keys : Vec<&String> = self.own.keys().collect();
+        let mut keys: Vec<&String> = self.own.keys().collect();
         if let Some(parent) = self.parent {
             keys.append(&mut parent.keys())
         }

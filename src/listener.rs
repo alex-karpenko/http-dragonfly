@@ -560,7 +560,11 @@ impl Listener {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
             .collect();
-        let env: HashMap<&String, &String> = ctx.keys().into_iter().map(|k| (k, ctx.get(k).unwrap())).collect();
+        let env: HashMap<&String, &String> = ctx
+            .keys()
+            .into_iter()
+            .map(|k| (k, ctx.get(k).unwrap()))
+            .collect();
 
         let input = json!({
             "body": body,
@@ -575,8 +579,6 @@ impl Listener {
                 }
             }
         });
-
-        println!("{:#?}", input);
 
         filter.run(input)
     }
