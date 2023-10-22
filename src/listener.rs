@@ -1,9 +1,10 @@
 use futures_util::future::join_all;
 use http::{request::Parts, Error, HeaderValue};
 use hyper::{
-    body::Bytes, header::HOST, http, Body, Client, Error as HyperError, HeaderMap, Request,
-    Response, StatusCode, Uri,
+    body::Bytes, client::HttpConnector, header::HOST, http, Body, Client, Error as HyperError,
+    HeaderMap, Request, Response, StatusCode, Uri,
 };
+use hyper_tls::HttpsConnector;
 use regex::Regex;
 use serde_json::{json, Value};
 use shellexpand::env_with_context_no_errors;
@@ -64,7 +65,6 @@ impl Listener {
         let mut target_ctx = vec![];
         let mut target_ids = vec![];
 
-        let http_client = Client::new();
         let mut targets: Vec<&TargetConfig> = vec![];
         let mut conditional_target_id: Option<String> = None;
 
@@ -172,6 +172,12 @@ impl Listener {
 
             // Put request to queue
             debug!("target `{}` request: {:?}", target.get_id(), target_request);
+
+            let mut connector = HttpConnector::new();
+            connector.set_connect_timeout(Some(target.timeout));
+            let connector = HttpsConnector::new_with_connector(connector);
+            let http_client = Client::builder().build(connector);
+
             target_requests.push(http_client.request(target_request));
             target_ctx.push(ctx);
             target_ids.push(target.get_id());

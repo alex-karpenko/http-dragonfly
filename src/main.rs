@@ -27,6 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     for cfg in listeners {
         let server = Server::bind(&cfg.get_socket());
+        let server = server.http1_header_read_timeout(cfg.timeout);
 
         let ctx = ctx.clone();
         let make_service = make_service_fn(move |conn: &AddrStream| {
