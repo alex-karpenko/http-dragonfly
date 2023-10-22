@@ -19,7 +19,7 @@ use std::{convert::Infallible, error::Error, sync::Arc};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli_config = CliConfig::new();
-    let ctx = Arc::new(Context::root());
+    let ctx = Arc::new(Context::root(&cli_config.env_mask));
     let app_config = AppConfig::new(&cli_config.config, *ctx)?;
     let mut servers = vec![];
 

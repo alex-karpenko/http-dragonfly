@@ -580,6 +580,8 @@ impl Listener {
             }
         });
 
+        debug!("{:?}", input);
+
         filter.run(input)
     }
 }

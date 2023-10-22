@@ -2,24 +2,30 @@ use clap::Parser;
 use tracing::debug;
 use tracing_subscriber::{filter::LevelFilter, fmt, EnvFilter};
 
+const DEFAULT_ENV_REGEX: &str = "^HTTP_ENV_[a-zA-Z0-9_]+$";
+
 #[derive(Parser, Debug)]
-#[clap(author, version, about)]
+#[command(author, version, about)]
 pub struct CliConfig {
     /// Enable extreme logging (debug)
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub debug: bool,
 
     /// Enable additional logging (info)
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub verbose: bool,
 
     /// Write logs in JSON format
-    #[clap(short, long)]
+    #[arg(short, long)]
     pub json_log: bool,
 
     /// Path to config file
-    #[clap(long, short)]
+    #[arg(long, short)]
     pub config: String,
+
+    /// Allowed environment variables mask (regex)
+    #[arg(long, short, default_value_t = DEFAULT_ENV_REGEX.to_string())]
+    pub env_mask: String,
 }
 
 impl CliConfig {

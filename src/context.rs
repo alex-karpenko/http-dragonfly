@@ -1,4 +1,5 @@
 use once_cell::sync::OnceCell;
+use regex::Regex;
 use std::collections::HashMap;
 use std::env;
 
@@ -14,7 +15,7 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn root() -> &'static Context<'a> {
+    pub fn root(env_mask_regex: &str) -> &'static Context<'a> {
         static ROOT_CONTEXT: OnceCell<Context> = OnceCell::new();
 
         let ctx = ROOT_CONTEXT.get_or_init(|| {
@@ -23,8 +24,11 @@ impl<'a> Context<'a> {
             ctx.insert("CTX_APP_NAME".into(), CTX_APP_NAME.into());
             ctx.insert("CTX_APP_VERSION".into(), CTX_APP_VERSION.into());
 
+            let re = Regex::new(env_mask_regex).unwrap();
             env::vars().for_each(|(k, v)| {
-                ctx.insert(k, v);
+                if re.is_match(&k) {
+                    ctx.insert(k, v);
+                }
             });
 
             Context {
