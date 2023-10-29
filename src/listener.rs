@@ -99,7 +99,7 @@ impl Listener {
                                 } else {
                                     // Error - more than one target has true condition
                                     let empty = Response::builder()
-                                        .status(cfg.response.no_targets_status.get_code())
+                                        .status(cfg.response.no_targets_status)
                                         .body(Body::empty())?;
                                     return Ok(Listener::override_response(
                                         empty,
@@ -231,7 +231,7 @@ impl Listener {
                     Listener::override_response(resp, &ctx, &cfg.response.override_config)
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status.get_code())
+                        .status(cfg.response.no_targets_status)
                         .body(Body::empty())?;
                     Listener::override_response(empty, ctx, &cfg.response.override_config)
                 }
@@ -272,7 +272,7 @@ impl Listener {
                         Listener::override_response(resp, &ctx, &cfg.response.override_config)
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status.get_code())
+                            .status(cfg.response.no_targets_status)
                             .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
@@ -292,7 +292,7 @@ impl Listener {
                         Listener::override_response(resp, &ctx, &cfg.response.override_config)
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status.get_code())
+                            .status(cfg.response.no_targets_status)
                             .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
@@ -311,13 +311,13 @@ impl Listener {
                         Listener::override_response(resp, &ctx, &cfg.response.override_config)
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status.get_code())
+                            .status(cfg.response.no_targets_status)
                             .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status.get_code())
+                        .status(cfg.response.no_targets_status)
                         .body(Body::empty())?;
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
@@ -335,13 +335,13 @@ impl Listener {
                         Listener::override_response(resp, &ctx, &cfg.response.override_config)
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status.get_code())
+                            .status(cfg.response.no_targets_status)
                             .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status.get_code())
+                        .status(cfg.response.no_targets_status)
                         .body(Body::empty())?;
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
@@ -354,13 +354,13 @@ impl Listener {
                         Listener::override_response(resp, &ctx, &cfg.response.override_config)
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status.get_code())
+                            .status(cfg.response.no_targets_status)
                             .body(Body::empty())?;
                         Listener::override_response(empty, ctx, &cfg.response.override_config)
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status.get_code())
+                        .status(cfg.response.no_targets_status)
                         .body(Body::empty())?;
                     Listener::override_response(empty, &ctx, &cfg.response.override_config)
                 }
@@ -470,8 +470,8 @@ impl Listener {
     fn build_on_error_response(e: HyperError, status: &Option<ResponseStatus>) -> Response<Body> {
         let resp = Response::builder();
 
-        let resp = if let Some(status) = status {
-            resp.status(status.get_code())
+        let resp = if let Some(status) = status.to_owned() {
+            resp.status(status)
         } else if e.is_connect() || e.is_closed() {
             resp.status(502)
         } else if e.is_timeout() {
@@ -493,8 +493,8 @@ impl Listener {
             let mut new_resp = Response::builder();
 
             // Set status
-            new_resp = if let Some(status) = &cfg.status {
-                new_resp.status(status.get_code())
+            new_resp = if let Some(status) = cfg.status {
+                new_resp.status(status)
             } else {
                 new_resp.status(resp_parts.status)
             };
