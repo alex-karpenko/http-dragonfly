@@ -454,10 +454,12 @@ impl Listener {
                         headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
                     }
                 }
-                HeaderTransformActon::Replace(key) => {
-                    let value = transform.value.as_ref().unwrap().as_str();
-                    let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
-                    headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                HeaderTransformActon::Update(key) => {
+                    if headers.contains_key(key) {
+                        let value = transform.value.as_ref().unwrap().as_str();
+                        let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
+                        headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                    }
                 }
                 HeaderTransformActon::Drop(key) => {
                     if key == "*" {

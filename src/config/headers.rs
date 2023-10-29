@@ -13,7 +13,7 @@ pub struct HeaderTransform {
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
 pub enum HeaderTransformActon {
     Add(String),
-    Replace(String),
+    Update(String),
     Drop(String),
 }
 
@@ -27,7 +27,7 @@ impl<'de> Deserialize<'de> for HeaderTransform {
         enum Fields {
             Drop,
             Add,
-            Replace,
+            Update,
             Value,
         }
 
@@ -61,12 +61,12 @@ impl<'de> Deserialize<'de> for HeaderTransform {
                             }
                             action = Some(HeaderTransformActon::Drop(map.next_value::<String>()?))
                         }
-                        Fields::Replace => {
+                        Fields::Update => {
                             if action.is_some() {
-                                return Err(de::Error::duplicate_field("replace"));
+                                return Err(de::Error::duplicate_field("update"));
                             }
                             action =
-                                Some(HeaderTransformActon::Replace(map.next_value::<String>()?))
+                                Some(HeaderTransformActon::Update(map.next_value::<String>()?))
                         }
                         Fields::Value => {
                             if value.is_some() {
@@ -79,7 +79,7 @@ impl<'de> Deserialize<'de> for HeaderTransform {
 
                 if let Some(action) = action {
                     match action {
-                        HeaderTransformActon::Add(_) | HeaderTransformActon::Replace(_) => {
+                        HeaderTransformActon::Add(_) | HeaderTransformActon::Update(_) => {
                             if value.is_none() {
                                 return Err(de::Error::missing_field("value"));
                             }
@@ -95,13 +95,13 @@ impl<'de> Deserialize<'de> for HeaderTransform {
                     Ok(HeaderTransform { action, value })
                 } else {
                     Err(de::Error::missing_field(
-                        "action should be one of add/drop/replace",
+                        "action should be one of add/drop/update",
                     ))
                 }
             }
         }
 
-        const FIELDS: &[&str] = &["add", "drop", "replace", "value"];
+        const FIELDS: &[&str] = &["add", "drop", "update", "value"];
         deserializer.deserialize_struct("HeaderAction", FIELDS, HeaderTransformVisitor)
     }
 }
