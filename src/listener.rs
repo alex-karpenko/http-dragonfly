@@ -390,10 +390,10 @@ impl Listener {
         own.insert("CTX_REQUEST_METHOD".into(), req.method.to_string());
         own.insert("CTX_REQUEST_PATH".into(), req.uri.path().to_string());
         if let Some(host) = req.uri.host() {
-            own.insert("CTX_REQUEST_HOST".into(), host.to_lowercase().to_string());
+            own.insert("CTX_REQUEST_HOST".into(), host.to_lowercase());
         }
         if let Some(query) = req.uri.query() {
-            own.insert("CTX_REQUEST_QUERY".into(), query.to_lowercase().to_string());
+            own.insert("CTX_REQUEST_QUERY".into(), query.to_lowercase());
         }
 
         // CTX_REQUEST_HEADERS_<UPPERCASE_HEADER_NAME>
@@ -418,8 +418,7 @@ impl Listener {
                 .unwrap()
                 .host()
                 .unwrap()
-                .to_lowercase()
-                .to_string(),
+                .to_lowercase(),
         );
 
         ctx.with(own)
@@ -505,8 +504,7 @@ impl Listener {
             };
 
             // Prepare headers
-            let mut headers = resp_parts.headers.clone();
-            //let cfg_headers = cfg.headers.clone();
+            let mut headers = resp_parts.headers;
             if let Some(transforms) = &cfg.headers {
                 Listener::transform_headers(&mut headers, transforms, ctx);
             }
