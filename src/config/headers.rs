@@ -65,8 +65,7 @@ impl<'de> Deserialize<'de> for HeaderTransform {
                             if action.is_some() {
                                 return Err(de::Error::duplicate_field("update"));
                             }
-                            action =
-                                Some(HeaderTransformActon::Update(map.next_value::<String>()?))
+                            action = Some(HeaderTransformActon::Update(map.next_value::<String>()?))
                         }
                         Fields::Value => {
                             if value.is_some() {
