@@ -6,7 +6,7 @@ mod listener;
 
 use cli::CliConfig;
 use config::{listener::ListenerConfig, AppConfig};
-use context::Context;
+use context::{Context, RootOsEnvironment};
 use futures_util::future::join_all;
 use hyper::{
     server::conn::AddrStream,
@@ -24,8 +24,8 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli_config = CliConfig::new();
-    let ctx = Arc::new(Context::root(&cli_config.env_mask));
-    let app_config = AppConfig::new(&cli_config.config, *ctx)?;
+    let root_ctx = Arc::new(Context::root(RootOsEnvironment::new(&cli_config.env_mask)));
+    let app_config = AppConfig::new(&cli_config.config, *root_ctx)?;
     let mut servers = vec![];
 
     let listeners: Vec<Arc<&ListenerConfig>> = app_config.listeners.iter().map(Arc::new).collect();
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let server = server.http1_header_read_timeout(cfg.timeout);
         let name = cfg.get_name();
 
-        let ctx = ctx.clone();
+        let ctx = root_ctx.clone();
         let make_service = make_service_fn(move |conn: &AddrStream| {
             let addr = conn.remote_addr();
             let cfg = cfg.clone();

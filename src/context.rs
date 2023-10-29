@@ -15,7 +15,7 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn root(env_mask_regex: &str) -> &'static Context<'a> {
+    pub fn root(root_env: impl RootEnvironment) -> &'static Context<'a> {
         static ROOT_CONTEXT: OnceCell<Context> = OnceCell::new();
 
         let ctx = ROOT_CONTEXT.get_or_init(|| {
@@ -23,13 +23,7 @@ impl<'a> Context<'a> {
 
             ctx.insert("CTX_APP_NAME".into(), CTX_APP_NAME.into());
             ctx.insert("CTX_APP_VERSION".into(), CTX_APP_VERSION.into());
-
-            let re = Regex::new(env_mask_regex).unwrap();
-            env::vars().for_each(|(k, v)| {
-                if re.is_match(&k) {
-                    ctx.insert(k, v);
-                }
-            });
+            ctx.extend(root_env.get_environment());
 
             Context {
                 own: ctx,
@@ -95,5 +89,33 @@ impl<'a> Iterator for Iter<'a> {
         } else {
             None
         }
+    }
+}
+
+pub trait RootEnvironment {
+    fn get_environment(&self) -> ContextMap;
+}
+
+pub struct RootOsEnvironment<'a> {
+    env_mask_regex: &'a str,
+}
+
+impl<'a> RootEnvironment for RootOsEnvironment<'a> {
+    fn get_environment(&self) -> ContextMap {
+        let mut env_ctx = ContextMap::new();
+        let re = Regex::new(self.env_mask_regex).unwrap();
+        env::vars().for_each(|(k, v)| {
+            if re.is_match(&k) {
+                env_ctx.insert(k, v);
+            }
+        });
+
+        env_ctx
+    }
+}
+
+impl<'a> RootOsEnvironment<'a> {
+    pub fn new(env_mask_regex: &'a str) -> Self {
+        Self { env_mask_regex }
     }
 }
