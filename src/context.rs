@@ -64,11 +64,36 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn keys(&self) -> Vec<&String> {
-        let mut keys: Vec<&String> = self.own.keys().collect();
-        if let Some(parent) = self.parent {
-            keys.append(&mut parent.keys())
+    pub fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a String, &'a String)> + 'a> {
+        let iter = Box::new(self.own.iter());
+        Box::new(Iter {
+            ctx: self,
+            iter,
+            finished: false,
+        })
+    }
+}
+
+pub struct Iter<'a> {
+    ctx: &'a Context<'a>,
+    iter: Box<dyn Iterator<Item = (&'a String, &'a String)> + 'a>,
+    finished: bool,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = (&'a String, &'a String);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(next) = self.iter.next() {
+            Some(next)
+        } else if self.ctx.parent.is_none() {
+            None
+        } else if !self.finished {
+            self.finished = true;
+            self.iter = self.ctx.parent.unwrap().iter();
+            self.iter.next()
+        } else {
+            None
         }
-        keys
     }
 }

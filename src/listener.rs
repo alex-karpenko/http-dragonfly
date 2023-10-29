@@ -568,12 +568,7 @@ impl Listener {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
             .collect();
-        let env: HashMap<&String, &String> = ctx
-            .keys()
-            .into_iter()
-            .map(|k| (k, ctx.get(k).unwrap()))
-            .collect();
-
+        let env = ctx.iter().collect::<HashMap<&String, &String>>();
         let input = json!({
             "body": body,
             "env": env,
