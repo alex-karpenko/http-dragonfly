@@ -21,6 +21,10 @@ use self::{
     target::{TargetConditionConfig, TargetConfig, TargetOnErrorAction},
 };
 
+pub trait ConfigValidator {
+    fn validate(&self) -> Result<(), HttpDragonflyError>;
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct AppConfig {
@@ -39,15 +43,17 @@ impl<'a> AppConfig {
 
         debug!("Application config: {:#?}", config);
         match config.validate() {
-            Ok(config) => {
+            Ok(_) => {
                 static APP_CONFIG: OnceCell<AppConfig> = OnceCell::new();
                 Ok(APP_CONFIG.get_or_init(|| config))
             }
             Err(e) => Err(e),
         }
     }
+}
 
-    fn validate(self) -> Result<AppConfig, HttpDragonflyError> {
+impl ConfigValidator for AppConfig {
+    fn validate(&self) -> Result<(), HttpDragonflyError> {
         for listener in &self.listeners {
             // Make sure all target IDs are unique
             let ids: HashSet<String> = listener.targets.iter().map(TargetConfig::get_id).collect();
@@ -60,7 +66,6 @@ impl<'a> AppConfig {
                 });
             }
 
-            //if listener.targets.len() !=
             match listener.response.strategy {
                 ResponseStrategy::ConditionalRouting => {
                     // Make sure that all targets have condition defined if strategy is conditional_routing
@@ -138,6 +143,6 @@ impl<'a> AppConfig {
                 }
             }
         }
-        Ok(self)
+        Ok(())
     }
 }
