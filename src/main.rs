@@ -15,6 +15,11 @@ use hyper::{
 };
 use listener::Listener;
 use std::{convert::Infallible, error::Error, sync::Arc};
+use tokio::{
+    select,
+    signal::unix::{signal, SignalKind},
+};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -28,6 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for cfg in listeners {
         let server = Server::bind(&cfg.get_socket());
         let server = server.http1_header_read_timeout(cfg.timeout);
+        let name = cfg.get_name();
 
         let ctx = ctx.clone();
         let make_service = make_service_fn(move |conn: &AddrStream| {
@@ -39,7 +45,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             async move { Ok::<_, Infallible>(service) }
         });
 
-        let server = server.serve(make_service);
+        let server = server
+            .serve(make_service)
+            .with_graceful_shutdown(shutdown_signal(name));
 
         servers.push(server);
     }
@@ -47,4 +55,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _results = join_all(servers).await;
 
     Ok(())
+}
+
+async fn shutdown_signal(listener_name: String) {
+    let mut terminate = signal(SignalKind::terminate())
+        .expect("{listener_name}: unable to install TERM signal handler");
+    let mut interrupt = signal(SignalKind::interrupt())
+        .expect("{listener_name}: unable to install INT signal handler");
+    let mut quit =
+        signal(SignalKind::quit()).expect("{listener_name}: unable to install QUIT signal handler");
+    let mut hangup = signal(SignalKind::hangup())
+        .expect("{listener_name}: unable to install HANGUP signal handler");
+
+    let sig = select! {
+        _ = terminate.recv() => "TERM",
+        _ = interrupt.recv() => "INT",
+        _ = quit.recv() => "QUIT",
+        _ = hangup.recv() => "HANGUP",
+    };
+    info!("{listener_name}: {sig} signal has been received, shutting down");
 }
