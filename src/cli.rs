@@ -1,4 +1,5 @@
 use clap::Parser;
+use regex::Regex;
 use tracing::debug;
 use tracing_subscriber::{filter::LevelFilter, fmt, EnvFilter};
 
@@ -24,7 +25,7 @@ pub struct CliConfig {
     pub config: String,
 
     /// Allowed environment variables mask (regex)
-    #[arg(long, short, default_value_t = DEFAULT_ENV_REGEX.to_string())]
+    #[arg(long, short, default_value_t = DEFAULT_ENV_REGEX.to_string(), value_parser=CliConfig::parse_env_mask)]
     pub env_mask: String,
 }
 
@@ -58,5 +59,13 @@ impl CliConfig {
         } else {
             subscriber.event_format(log_format.compact()).init();
         };
+    }
+
+    fn parse_env_mask(mask: &str) -> Result<String, String> {
+        if Regex::new(mask).is_err() {
+            Err("invalid environment filter regex".into())
+        } else {
+            Ok(mask.into())
+        }
     }
 }

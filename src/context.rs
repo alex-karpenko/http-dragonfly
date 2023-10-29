@@ -103,7 +103,7 @@ pub struct RootOsEnvironment<'a> {
 impl<'a> RootEnvironment for RootOsEnvironment<'a> {
     fn get_environment(&self) -> ContextMap {
         let mut env_ctx = ContextMap::new();
-        let re = Regex::new(self.env_mask_regex).unwrap();
+        let re = Regex::new(self.env_mask_regex).expect("invalid environment filter regex");
         env::vars().for_each(|(k, v)| {
             if re.is_match(&k) {
                 env_ctx.insert(k, v);
