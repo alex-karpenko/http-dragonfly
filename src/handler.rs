@@ -1,5 +1,5 @@
 use futures_util::future::join_all;
-use http::{request::Parts, Error, HeaderValue};
+use http::{Error, HeaderValue};
 use hyper::{
     client::HttpConnector, header::HOST, http, Body, Client, Error as HyperError, Request,
     Response, StatusCode, Uri,
@@ -18,7 +18,7 @@ use crate::{
         strategy::ResponseStrategy,
         target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
-    context::{Context, ContextMap},
+    context::Context,
 };
 
 pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Body>>, &'a Context<'a>)>;
@@ -54,7 +54,9 @@ impl RequestHandler {
         let (req_parts, req_body) = req.into_parts();
         let body_bytes = hyper::body::to_bytes(req_body).await.unwrap();
         // Add own context - listener + request
-        let ctx = self.request_context(&addr, &req_parts);
+        let ctx = self
+            .root_ctx
+            .with_request(&addr, &req_parts, self.listener_cfg.name());
         //debug!("request context: {:?}", ctx);
 
         // Prepare new headers
@@ -136,7 +138,7 @@ impl RequestHandler {
         }
 
         for target in targets.iter() {
-            let ctx = self.target_context(target, &ctx);
+            let ctx = ctx.with_target(target);
             let target_request_builder = Request::builder();
             // Set method
             let target_request_builder = target_request_builder.method(&req_parts.method);
@@ -223,7 +225,7 @@ impl RequestHandler {
                 let target_id = selector_target_id.unwrap();
                 let (resp, ctx) = responses.remove(&target_id).unwrap();
                 if let Some(resp) = resp {
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else {
                     let empty = Response::builder()
@@ -236,7 +238,7 @@ impl RequestHandler {
                 if let Some(ok_target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else {
                     let empty = Response::new(Body::empty());
@@ -247,7 +249,7 @@ impl RequestHandler {
                 if let Some(failed_target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else {
                     let empty = Response::new(Body::empty());
@@ -258,13 +260,13 @@ impl RequestHandler {
                 if let Some(ok_target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else {
                     let target_id = selector_target_id.unwrap();
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
-                        let ctx = self.response_context(&resp, ctx);
+                        let ctx = ctx.with_response(&resp);
                         response_config.override_response(resp, &ctx)
                     } else {
                         let empty = Response::builder()
@@ -278,13 +280,13 @@ impl RequestHandler {
                 if let Some(failed_target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else {
                     let target_id = selector_target_id.unwrap();
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
-                        let ctx = self.response_context(&resp, ctx);
+                        let ctx = ctx.with_response(&resp);
                         response_config.override_response(resp, &ctx)
                     } else {
                         let empty = Response::builder()
@@ -298,12 +300,12 @@ impl RequestHandler {
                 if let Some(ok_target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else if let Some(failed_target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     if let Some(resp) = resp {
-                        let ctx = self.response_context(&resp, ctx);
+                        let ctx = ctx.with_response(&resp);
                         response_config.override_response(resp, &ctx)
                     } else {
                         let empty = Response::builder()
@@ -322,12 +324,12 @@ impl RequestHandler {
                 if let Some(failed_target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
-                    let ctx = self.response_context(&resp, ctx);
+                    let ctx = ctx.with_response(&resp);
                     response_config.override_response(resp, &ctx)
                 } else if let Some(ok_target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     if let Some(resp) = resp {
-                        let ctx = self.response_context(&resp, ctx);
+                        let ctx = ctx.with_response(&resp);
                         response_config.override_response(resp, &ctx)
                     } else {
                         let empty = Response::builder()
@@ -346,7 +348,7 @@ impl RequestHandler {
                 if let Some(target_id) = conditional_target_id {
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
-                        let ctx = self.response_context(&resp, ctx);
+                        let ctx = ctx.with_response(&resp);
                         response_config.override_response(resp, &ctx)
                     } else {
                         let empty = Response::builder()
@@ -365,62 +367,6 @@ impl RequestHandler {
 
         // Final response
         Ok(resp)
-    }
-
-    fn request_context<'a>(&'a self, addr: &'a SocketAddr, req: &'a Parts) -> Context<'a> {
-        let mut own = ContextMap::new();
-
-        // CTX_LISTENER_NAME
-        // CTX_REQUEST_SOURCE_IP
-        // CTX_REQUEST_METHOD
-        // CTX_REQUEST_HOST
-        // CTX_REQUEST_PATH
-        // CTX_REQUEST_QUERY
-        own.insert("CTX_LISTENER_NAME".into(), self.listener_cfg.name());
-        own.insert("CTX_REQUEST_SOURCE_IP".into(), addr.ip().to_string());
-        own.insert("CTX_REQUEST_METHOD".into(), req.method.to_string());
-        own.insert("CTX_REQUEST_PATH".into(), req.uri.path().to_string());
-        if let Some(host) = req.uri.host() {
-            own.insert("CTX_REQUEST_HOST".into(), host.to_lowercase());
-        }
-        if let Some(query) = req.uri.query() {
-            own.insert("CTX_REQUEST_QUERY".into(), query.to_lowercase());
-        }
-
-        // CTX_REQUEST_HEADERS_<UPPERCASE_HEADER_NAME>
-        req.headers.iter().for_each(|(n, v)| {
-            let n = n.as_str().to_uppercase().replace('-', "_");
-            let v = v.to_str().unwrap_or("").to_string();
-            own.insert(format!("CTX_REQUEST_HEADERS_{n}"), v);
-        });
-
-        self.root_ctx.with(own)
-    }
-
-    fn target_context<'a>(&'a self, cfg: &'a TargetConfig, ctx: &'a Context) -> Context<'a> {
-        let mut own = ContextMap::new();
-
-        // CTX_TARGET_ID
-        // CTX_TARGET_HOST
-        own.insert("CTX_TARGET_ID".into(), cfg.id());
-        own.insert("CTX_TARGET_HOST".into(), cfg.host());
-
-        ctx.with(own)
-    }
-
-    fn response_context<'a>(&'a self, resp: &Response<Body>, ctx: &'a Context) -> Context<'a> {
-        let mut own = ContextMap::new();
-
-        // CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME>
-        // CTX_RESPONSE_STATUS
-        own.insert("CTX_RESPONSE_STATUS".into(), resp.status().to_string());
-        resp.headers().iter().for_each(|(n, v)| {
-            let n = n.as_str().to_uppercase().replace('-', "_");
-            let v = v.to_str().unwrap_or("").to_string();
-            own.insert(format!("CTX_RESPONSE_HEADERS_{n}"), v);
-        });
-
-        ctx.with(own)
     }
 
     fn build_error_response(

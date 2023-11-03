@@ -1,7 +1,11 @@
+use hyper::{http::request::Parts, Body, Response};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use std::collections::HashMap;
 use std::env;
+use std::net::SocketAddr;
+
+use crate::config::target::TargetConfig;
 
 const CTX_APP_NAME: &str = env!("CARGO_PKG_NAME");
 const CTX_APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -65,6 +69,67 @@ impl<'a> Context<'a> {
             iter,
             finished: false,
         })
+    }
+
+    pub fn with_request(
+        &'a self,
+        addr: &'a SocketAddr,
+        req: &'a Parts,
+        listener_name: String,
+    ) -> Context<'a> {
+        let mut own = ContextMap::new();
+
+        // CTX_LISTENER_NAME
+        // CTX_REQUEST_SOURCE_IP
+        // CTX_REQUEST_METHOD
+        // CTX_REQUEST_HOST
+        // CTX_REQUEST_PATH
+        // CTX_REQUEST_QUERY
+        own.insert("CTX_LISTENER_NAME".into(), listener_name);
+        own.insert("CTX_REQUEST_SOURCE_IP".into(), addr.ip().to_string());
+        own.insert("CTX_REQUEST_METHOD".into(), req.method.to_string());
+        own.insert("CTX_REQUEST_PATH".into(), req.uri.path().to_string());
+        if let Some(host) = req.uri.host() {
+            own.insert("CTX_REQUEST_HOST".into(), host.to_lowercase());
+        }
+        if let Some(query) = req.uri.query() {
+            own.insert("CTX_REQUEST_QUERY".into(), query.to_lowercase());
+        }
+
+        // CTX_REQUEST_HEADERS_<UPPERCASE_HEADER_NAME>
+        req.headers.iter().for_each(|(n, v)| {
+            let n = n.as_str().to_uppercase().replace('-', "_");
+            let v = v.to_str().unwrap_or("").to_string();
+            own.insert(format!("CTX_REQUEST_HEADERS_{n}"), v);
+        });
+
+        self.with(own)
+    }
+
+    pub fn with_target(&'a self, cfg: &'a TargetConfig) -> Context<'a> {
+        let mut own = ContextMap::new();
+
+        // CTX_TARGET_ID
+        // CTX_TARGET_HOST
+        own.insert("CTX_TARGET_ID".into(), cfg.id());
+        own.insert("CTX_TARGET_HOST".into(), cfg.host());
+
+        self.with(own)
+    }
+
+    pub fn with_response(&'a self, resp: &Response<Body>) -> Context<'a> {
+        let mut own = ContextMap::new();
+
+        // CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME>
+        // CTX_RESPONSE_STATUS
+        own.insert("CTX_RESPONSE_STATUS".into(), resp.status().to_string());
+        resp.headers().iter().for_each(|(n, v)| {
+            let n = n.as_str().to_uppercase().replace('-', "_");
+            let v = v.to_str().unwrap_or("").to_string();
+            own.insert(format!("CTX_RESPONSE_HEADERS_{n}"), v);
+        });
+
+        self.with(own)
     }
 }
 
