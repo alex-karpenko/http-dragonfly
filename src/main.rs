@@ -24,16 +24,17 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli_config = CliConfig::new();
-    let root_ctx = Arc::new(Context::root(RootOsEnvironment::new(&cli_config.env_mask)));
-    let app_config = AppConfig::new(&cli_config.config, *root_ctx)?;
+    let root_ctx = Arc::new(Context::root(RootOsEnvironment::new(cli_config.env_mask())));
+    let app_config = AppConfig::new(&cli_config.config_path(), *root_ctx)?;
     let mut servers = vec![];
 
-    let listeners: Vec<Arc<&ListenerConfig>> = app_config.listeners.iter().map(Arc::new).collect();
+    let listeners: Vec<Arc<&ListenerConfig>> =
+        app_config.listeners().iter().map(Arc::new).collect();
 
     for cfg in listeners {
-        let server = Server::bind(&cfg.get_socket());
-        let server = server.http1_header_read_timeout(cfg.timeout);
-        let name = cfg.get_name();
+        let server = Server::bind(&cfg.socket());
+        let server = server.http1_header_read_timeout(cfg.timeout());
+        let name = cfg.name();
 
         let ctx = root_ctx.clone();
         let make_service = make_service_fn(move |conn: &AddrStream| {

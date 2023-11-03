@@ -17,18 +17,18 @@ const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 #[serde(deny_unknown_fields)]
 pub struct TargetConfig {
     id: Option<String>,
-    pub url: String,
-    pub headers: Option<Vec<HeaderTransform>>,
-    pub body: Option<String>,
+    url: String,
+    headers: Option<Vec<HeaderTransform>>,
+    body: Option<String>,
     #[serde(
         with = "humantime_serde",
         default = "TargetConfig::default_target_timeout"
     )]
-    pub timeout: Duration,
+    timeout: Duration,
     #[serde(default)]
-    pub on_error: TargetOnErrorAction,
-    pub error_status: Option<ResponseStatus>,
-    pub condition: Option<TargetConditionConfig>,
+    on_error: TargetOnErrorAction,
+    error_status: Option<ResponseStatus>,
+    condition: Option<TargetConditionConfig>,
 }
 
 impl TargetConfig {
@@ -36,7 +36,7 @@ impl TargetConfig {
         Duration::from_secs(DEFAULT_TARGET_TIMEOUT_SEC)
     }
 
-    pub fn get_id(&self) -> String {
+    pub fn id(&self) -> String {
         if let Some(id) = &self.id {
             id.clone()
         } else {
@@ -44,12 +44,40 @@ impl TargetConfig {
         }
     }
 
-    pub fn get_uri(&self) -> Result<Uri, HttpDragonflyError> {
+    pub fn uri(&self) -> Result<Uri, HttpDragonflyError> {
         self.url
             .parse()
             .map_err(|e| HttpDragonflyError::InvalidConfig {
                 cause: format!("invalid url `{}`: {e}", self.url),
             })
+    }
+
+    pub fn url(&self) -> &str {
+        self.url.as_ref()
+    }
+
+    pub fn headers(&self) -> &Option<Vec<HeaderTransform>> {
+        &self.headers
+    }
+
+    pub fn body(&self) -> &Option<String> {
+        &self.body
+    }
+
+    pub fn timeout(&self) -> Duration {
+        self.timeout
+    }
+
+    pub fn on_error(&self) -> &TargetOnErrorAction {
+        &self.on_error
+    }
+
+    pub fn error_status(&self) -> Option<u16> {
+        self.error_status
+    }
+
+    pub fn condition(&self) -> &Option<TargetConditionConfig> {
+        &self.condition
     }
 }
 

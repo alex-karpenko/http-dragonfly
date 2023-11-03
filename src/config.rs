@@ -28,7 +28,7 @@ pub trait ConfigValidator {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct AppConfig {
-    pub listeners: Vec<ListenerConfig>,
+    listeners: Vec<ListenerConfig>,
 }
 
 impl<'a> AppConfig {
@@ -50,37 +50,41 @@ impl<'a> AppConfig {
             Err(e) => Err(e),
         }
     }
+
+    pub fn listeners(&self) -> &[ListenerConfig] {
+        self.listeners.as_ref()
+    }
 }
 
 impl ConfigValidator for AppConfig {
     fn validate(&self) -> Result<(), HttpDragonflyError> {
         for listener in &self.listeners {
             // Make sure all target IDs are unique
-            let ids: HashSet<String> = listener.targets.iter().map(TargetConfig::get_id).collect();
-            if ids.len() != listener.targets.len() {
+            let ids: HashSet<String> = listener.targets().iter().map(TargetConfig::id).collect();
+            if ids.len() != listener.targets().len() {
                 return Err(HttpDragonflyError::InvalidConfig {
                     cause: format!(
                         "all target IDs of the listener `{}` should be unique",
-                        listener.get_name()
+                        listener.name()
                     ),
                 });
             }
 
-            match listener.response.strategy {
+            match listener.response().strategy() {
                 ResponseStrategy::ConditionalRouting => {
                     // Make sure that all targets have condition defined if strategy is conditional_routing
-                    if listener.targets.iter().any(|t| t.condition.is_none()) {
+                    if listener.targets().iter().any(|t| t.condition().is_none()) {
                         return Err(HttpDragonflyError::InvalidConfig {
-                            cause: format!("all targets of the listener `{}` must have condition defined because strategy is `{}`", listener.get_name(), listener.response.strategy),
+                            cause: format!("all targets of the listener `{}` must have condition defined because strategy is `{}`", listener.name(), listener.response().strategy()),
                         });
                     }
                     // Ensure singe default condition is present
                     let default_count = listener
-                        .targets
+                        .targets()
                         .iter()
                         .filter(|t| {
                             matches!(
-                                t.condition.as_ref().unwrap(),
+                                t.condition().as_ref().unwrap(),
                                 TargetConditionConfig::Default
                             )
                         })
@@ -89,7 +93,7 @@ impl ConfigValidator for AppConfig {
                         return Err(HttpDragonflyError::InvalidConfig {
                             cause: format!(
                                 "more than one default target is defined of the listener `{}` but only one is allowed",
-                                listener.get_name()
+                                listener.name()
                             ),
                         });
                     }
@@ -99,16 +103,16 @@ impl ConfigValidator for AppConfig {
                 | ResponseStrategy::OkThenTargetId => {
                     // Make sure that target_selector has valid target_id specified if strategy is *_target_id
                     let target_ids: Vec<String> =
-                        listener.targets.iter().map(TargetConfig::get_id).collect();
-                    if let Some(target_id) = &listener.response.target_selector {
+                        listener.targets().iter().map(TargetConfig::id).collect();
+                    if let Some(target_id) = &listener.response().target_selector() {
                         if !target_ids.contains(target_id) {
                             return Err(HttpDragonflyError::InvalidConfig {
-                                cause: format!("`target_selector` points to unknown target_id `{}` in the listener `{}`", target_id, listener.get_name()),
+                                cause: format!("`target_selector` points to unknown target_id `{}` in the listener `{}`", target_id, listener.name()),
                             });
                         }
                     } else {
                         return Err(HttpDragonflyError::InvalidConfig {
-                            cause: format!("`target_selector` should be specified for strategy `{}` in the listener `{}`", listener.response.strategy, listener.get_name()),
+                            cause: format!("`target_selector` should be specified for strategy `{}` in the listener `{}`", listener.response().strategy(), listener.name()),
                         });
                     }
                 }
@@ -116,7 +120,7 @@ impl ConfigValidator for AppConfig {
             };
 
             // Validate URLs
-            for url in listener.targets.iter().map(TargetConfig::get_uri) {
+            for url in listener.targets().iter().map(TargetConfig::uri) {
                 #[allow(clippy::question_mark)]
                 if let Err(e) = url {
                     return Err(e);
@@ -124,19 +128,19 @@ impl ConfigValidator for AppConfig {
             }
 
             // Validate target's error response override
-            for target in &listener.targets {
-                match target.on_error {
+            for target in listener.targets() {
+                match target.on_error() {
                     TargetOnErrorAction::Propagate | TargetOnErrorAction::Drop => {
-                        if target.error_status.is_some() {
+                        if target.error_status().is_some() {
                             return Err(HttpDragonflyError::InvalidConfig {
-                                cause: format!("`error_status` can be set if `on_error` is `status` only, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                                cause: format!("`error_status` can be set if `on_error` is `status` only, in the listener `{}` and target `{}`", listener.name(), target.id()),
                             });
                         }
                     }
                     TargetOnErrorAction::Status => {
-                        if target.error_status.is_none() {
+                        if target.error_status().is_none() {
                             return Err(HttpDragonflyError::InvalidConfig {
-                            cause: format!("`error_status` should be set if `on_error` is `status`, in the listener `{}` and target `{}`", listener.get_name(), target.get_id()),
+                            cause: format!("`error_status` should be set if `on_error` is `status`, in the listener `{}` and target `{}`", listener.name(), target.id()),
                         });
                         }
                     }

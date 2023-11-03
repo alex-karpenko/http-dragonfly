@@ -5,8 +5,18 @@ use serde::{
 
 #[derive(Debug, Clone)]
 pub struct HeaderTransform {
-    pub action: HeaderTransformActon,
-    pub value: Option<String>,
+    action: HeaderTransformActon,
+    value: Option<String>,
+}
+
+impl HeaderTransform {
+    pub fn action(&self) -> &HeaderTransformActon {
+        &self.action
+    }
+
+    pub fn value(&self) -> Option<&String> {
+        self.value.as_ref()
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]

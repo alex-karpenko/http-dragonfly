@@ -10,23 +10,23 @@ const DEFAULT_ENV_REGEX: &str = "^HTTP_ENV_[a-zA-Z0-9_]+$";
 pub struct CliConfig {
     /// Enable extreme logging (debug)
     #[arg(short, long)]
-    pub debug: bool,
+    debug: bool,
 
     /// Enable additional logging (info)
     #[arg(short, long)]
-    pub verbose: bool,
+    verbose: bool,
 
     /// Write logs in JSON format
     #[arg(short, long)]
-    pub json_log: bool,
+    json_log: bool,
 
     /// Path to config file
     #[arg(long, short)]
-    pub config: String,
+    config: String,
 
     /// Allowed environment variables mask (regex)
     #[arg(long, short, default_value_t = DEFAULT_ENV_REGEX.to_string(), value_parser=CliConfig::parse_env_mask)]
-    pub env_mask: String,
+    env_mask: String,
 }
 
 impl CliConfig {
@@ -67,5 +67,13 @@ impl CliConfig {
         } else {
             Ok(mask.into())
         }
+    }
+
+    pub fn config_path(&self) -> String {
+        self.config.to_string()
+    }
+
+    pub fn env_mask(&self) -> &str {
+        self.env_mask.as_ref()
     }
 }

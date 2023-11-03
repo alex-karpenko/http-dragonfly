@@ -20,17 +20,17 @@ const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 pub struct ListenerConfig {
     name: Option<String>,
     #[serde(rename = "on", default)]
-    pub listen_on: ListenOn,
+    listen_on: ListenOn,
     #[serde(
         with = "humantime_serde",
         default = "ListenerConfig::default_listener_timeout"
     )]
-    pub timeout: Duration,
-    pub headers: Option<Vec<HeaderTransform>>,
+    timeout: Duration,
+    headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
-    pub targets: Vec<TargetConfig>,
+    targets: Vec<TargetConfig>,
     #[serde(default)]
-    pub response: ResponseConfig,
+    response: ResponseConfig,
 }
 
 impl ListenerConfig {
@@ -38,7 +38,8 @@ impl ListenerConfig {
         Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
     }
 
-    pub fn get_name(&self) -> String {
+    /// Returns the name of this [`ListenerConfig`].
+    pub fn name(&self) -> String {
         if let Some(name) = &self.name {
             name.clone()
         } else {
@@ -46,10 +47,12 @@ impl ListenerConfig {
         }
     }
 
-    pub fn get_socket(&self) -> SocketAddr {
+    /// Returns the socket of this [`ListenerConfig`].
+    pub fn socket(&self) -> SocketAddr {
         self.listen_on.as_socket()
     }
 
+    /// Verifies if HTTP method is allowed to be used call for this [`ListenerConfig`]
     pub fn is_method_allowed(&self, method: &str) -> bool {
         if let Some(methods) = &self.methods {
             let method = method.to_lowercase();
@@ -58,11 +61,31 @@ impl ListenerConfig {
             true
         }
     }
+
+    /// Returns a reference to the timeout of this [`ListenerConfig`].
+    pub fn timeout(&self) -> Duration {
+        self.timeout
+    }
+
+    /// Returns the headers of this [`ListenerConfig`].
+    pub fn headers(&self) -> Option<&Vec<HeaderTransform>> {
+        self.headers.as_ref()
+    }
+
+    /// Returns a reference to the targets of this [`ListenerConfig`].
+    pub fn targets(&self) -> &[TargetConfig] {
+        self.targets.as_ref()
+    }
+
+    /// Returns a reference to the response of this [`ListenerConfig`].
+    pub fn response(&self) -> &ResponseConfig {
+        &self.response
+    }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
-pub enum HttpMethod {
+enum HttpMethod {
     Get,
     Post,
     Put,
@@ -73,7 +96,7 @@ pub enum HttpMethod {
 }
 
 #[derive(Debug)]
-pub struct ListenOn {
+struct ListenOn {
     ip: Ipv4Addr,
     port: u16,
 }

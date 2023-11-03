@@ -49,7 +49,7 @@ impl Listener {
         // Prepare new headers
         let mut headers = req_parts.headers.clone();
         headers.remove(HOST);
-        if let Some(transforms) = &cfg.headers {
+        if let Some(transforms) = &cfg.headers() {
             Listener::transform_headers(&mut headers, transforms, &ctx);
         }
         debug!("request headers: {:?}", headers);
@@ -57,8 +57,8 @@ impl Listener {
         // Process targets
         debug!(
             "Listener={}, strategy={}",
-            cfg.get_name(),
-            cfg.response.strategy
+            cfg.name(),
+            cfg.response().strategy()
         );
 
         let mut target_requests = vec![];
@@ -69,11 +69,11 @@ impl Listener {
         let mut conditional_target_id: Option<String> = None;
 
         // Verify conditions
-        for target in &cfg.targets {
-            match &cfg.response.strategy {
+        for target in cfg.targets() {
+            match &cfg.response().strategy() {
                 // Special flow in case of conditional routing
                 ResponseStrategy::ConditionalRouting => {
-                    match target.condition.as_ref().unwrap() {
+                    match target.condition().as_ref().unwrap() {
                         // Always insert default into empty targets list
                         TargetConditionConfig::Default => {
                             if targets.is_empty() {
@@ -90,7 +90,7 @@ impl Listener {
                                 if targets.is_empty() {
                                     targets.push(target)
                                 } else if matches!(
-                                    targets[0].condition.as_ref().unwrap(),
+                                    targets[0].condition().as_ref().unwrap(),
                                     TargetConditionConfig::Default
                                 ) {
                                     // Replace default by this target
@@ -99,24 +99,24 @@ impl Listener {
                                 } else {
                                     // Error - more than one target has true condition
                                     let empty = Response::builder()
-                                        .status(cfg.response.no_targets_status)
+                                        .status(cfg.response().no_targets_status())
                                         .body(Body::empty())?;
                                     return Ok(Listener::override_response(
                                         empty,
                                         &ctx,
-                                        &cfg.response.override_config,
+                                        cfg.response().override_config(),
                                     ));
                                 }
                             }
                         }
                     };
                     if !targets.is_empty() {
-                        conditional_target_id = Some(targets[0].get_id())
+                        conditional_target_id = Some(targets[0].id())
                     }
                 }
                 // Any other strategy
                 _ => {
-                    if let Some(condition) = target.condition.as_ref() {
+                    if let Some(condition) = target.condition().as_ref() {
                         match condition {
                             TargetConditionConfig::Default => targets.push(target),
                             TargetConditionConfig::Filter(filter) => {
@@ -143,12 +143,12 @@ impl Listener {
             // Set method
             let target_request_builder = target_request_builder.method(&req_parts.method);
             // Set uri
-            let url = env_with_context_no_errors(&target.url, |v| ctx.get(&v.into()));
+            let url = env_with_context_no_errors(target.url(), |v| ctx.get(&v.into()));
             let uri: Uri = url.parse()?;
             let mut target_request_builder = target_request_builder.uri(uri);
             // Prepare headers
             let mut headers = headers.clone();
-            if let Some(transforms) = &target.headers {
+            if let Some(transforms) = &target.headers() {
                 Listener::transform_headers(&mut headers, transforms, &ctx);
             }
             // Add Host header if empty
@@ -163,7 +163,7 @@ impl Listener {
                 target_request_builder = target_request_builder.header(k, v);
             }
             // Finalize request with body
-            let target_request: Request<Body> = if let Some(body) = &target.body {
+            let target_request: Request<Body> = if let Some(body) = &target.body() {
                 let body = env_with_context_no_errors(body, |v| ctx.get(&v.into()));
                 target_request_builder.body(Body::from(body))?
             } else {
@@ -171,18 +171,18 @@ impl Listener {
             };
 
             // Put request to queue
-            debug!("target `{}` request: {:?}", target.get_id(), target_request);
+            debug!("target `{}` request: {:?}", target.id(), target_request);
 
             // Make a connector
             let mut http_connector = HttpConnector::new();
-            http_connector.set_connect_timeout(Some(target.timeout));
+            http_connector.set_connect_timeout(Some(target.timeout()));
             http_connector.enforce_http(false);
             let https_connector = HttpsConnector::new_with_connector(http_connector);
             let http_client = Client::builder().build(https_connector);
 
             target_requests.push(http_client.request(target_request));
             target_ctx.push(ctx);
-            target_ids.push(target.get_id());
+            target_ids.push(target.id());
         }
 
         // Get results
@@ -198,12 +198,12 @@ impl Listener {
                 Err(e) => {
                     debug!("ERR: {:#?}", e);
                     let target = targets[pos];
-                    let resp = match target.on_error {
+                    let resp = match target.on_error() {
                         TargetOnErrorAction::Propagate => {
-                            Some(Listener::build_on_error_response(e, &target.error_status))
+                            Some(Listener::build_on_error_response(e, &target.error_status()))
                         }
                         TargetOnErrorAction::Status => {
-                            Some(Listener::build_on_error_response(e, &target.error_status))
+                            Some(Listener::build_on_error_response(e, &target.error_status()))
                         }
                         TargetOnErrorAction::Drop => None,
                     };
@@ -214,26 +214,26 @@ impl Listener {
 
         // Select/create response according to strategy
         let ok_target_id =
-            Listener::find_first_response(&responses, &cfg.response.failed_status_regex, false);
+            Listener::find_first_response(&responses, cfg.response().failed_status_regex(), false);
         let failed_target_id =
-            Listener::find_first_response(&responses, &cfg.response.failed_status_regex, true);
-        let selector_target_id = cfg.response.target_selector.clone();
-        let resp = match &cfg.response.strategy {
+            Listener::find_first_response(&responses, cfg.response().failed_status_regex(), true);
+        let selector_target_id = cfg.response().target_selector().clone();
+        let resp = match &cfg.response().strategy() {
             ResponseStrategy::AlwaysOverride => {
                 let empty = Response::new(Body::empty());
-                Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                Listener::override_response(empty, &ctx, cfg.response().override_config())
             }
             ResponseStrategy::AlwaysTargetId => {
                 let target_id = selector_target_id.unwrap();
                 let (resp, ctx) = responses.remove(&target_id).unwrap();
                 if let Some(resp) = resp {
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status)
+                        .status(cfg.response().no_targets_status())
                         .body(Body::empty())?;
-                    Listener::override_response(empty, ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, ctx, cfg.response().override_config())
                 }
             }
             ResponseStrategy::OkThenOverride => {
@@ -241,10 +241,10 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else {
                     let empty = Response::new(Body::empty());
-                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, cfg.response().override_config())
                 }
             }
             ResponseStrategy::FailedThenOverride => {
@@ -252,10 +252,10 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else {
                     let empty = Response::new(Body::empty());
-                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, cfg.response().override_config())
                 }
             }
             ResponseStrategy::OkThenTargetId => {
@@ -263,18 +263,18 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else {
                     let target_id = selector_target_id.unwrap();
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
                         let ctx = Listener::response_context(&resp, ctx);
-                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                        Listener::override_response(resp, &ctx, cfg.response().override_config())
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status)
+                            .status(cfg.response().no_targets_status())
                             .body(Body::empty())?;
-                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                        Listener::override_response(empty, ctx, cfg.response().override_config())
                     }
                 }
             }
@@ -283,18 +283,18 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else {
                     let target_id = selector_target_id.unwrap();
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
                         let ctx = Listener::response_context(&resp, ctx);
-                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                        Listener::override_response(resp, &ctx, cfg.response().override_config())
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status)
+                            .status(cfg.response().no_targets_status())
                             .body(Body::empty())?;
-                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                        Listener::override_response(empty, ctx, cfg.response().override_config())
                     }
                 }
             }
@@ -303,23 +303,23 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else if let Some(failed_target_id) = failed_target_id {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     if let Some(resp) = resp {
                         let ctx = Listener::response_context(&resp, ctx);
-                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                        Listener::override_response(resp, &ctx, cfg.response().override_config())
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status)
+                            .status(cfg.response().no_targets_status())
                             .body(Body::empty())?;
-                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                        Listener::override_response(empty, ctx, cfg.response().override_config())
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status)
+                        .status(cfg.response().no_targets_status())
                         .body(Body::empty())?;
-                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, cfg.response().override_config())
                 }
             }
             ResponseStrategy::FailedThenOk => {
@@ -327,23 +327,23 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
                     let resp = resp.unwrap();
                     let ctx = Listener::response_context(&resp, ctx);
-                    Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                    Listener::override_response(resp, &ctx, cfg.response().override_config())
                 } else if let Some(ok_target_id) = ok_target_id {
                     let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
                     if let Some(resp) = resp {
                         let ctx = Listener::response_context(&resp, ctx);
-                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                        Listener::override_response(resp, &ctx, cfg.response().override_config())
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status)
+                            .status(cfg.response().no_targets_status())
                             .body(Body::empty())?;
-                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                        Listener::override_response(empty, ctx, cfg.response().override_config())
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status)
+                        .status(cfg.response().no_targets_status())
                         .body(Body::empty())?;
-                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, cfg.response().override_config())
                 }
             }
             ResponseStrategy::ConditionalRouting => {
@@ -351,18 +351,18 @@ impl Listener {
                     let (resp, ctx) = responses.remove(&target_id).unwrap();
                     if let Some(resp) = resp {
                         let ctx = Listener::response_context(&resp, ctx);
-                        Listener::override_response(resp, &ctx, &cfg.response.override_config)
+                        Listener::override_response(resp, &ctx, cfg.response().override_config())
                     } else {
                         let empty = Response::builder()
-                            .status(cfg.response.no_targets_status)
+                            .status(cfg.response().no_targets_status())
                             .body(Body::empty())?;
-                        Listener::override_response(empty, ctx, &cfg.response.override_config)
+                        Listener::override_response(empty, ctx, cfg.response().override_config())
                     }
                 } else {
                     let empty = Response::builder()
-                        .status(cfg.response.no_targets_status)
+                        .status(cfg.response().no_targets_status())
                         .body(Body::empty())?;
-                    Listener::override_response(empty, &ctx, &cfg.response.override_config)
+                    Listener::override_response(empty, &ctx, cfg.response().override_config())
                 }
             }
         };
@@ -385,7 +385,7 @@ impl Listener {
         // CTX_REQUEST_HOST
         // CTX_REQUEST_PATH
         // CTX_REQUEST_QUERY
-        own.insert("CTX_LISTENER_NAME".into(), cfg.get_name());
+        own.insert("CTX_LISTENER_NAME".into(), cfg.name());
         own.insert("CTX_REQUEST_SOURCE_IP".into(), addr.ip().to_string());
         own.insert("CTX_REQUEST_METHOD".into(), req.method.to_string());
         own.insert("CTX_REQUEST_PATH".into(), req.uri.path().to_string());
@@ -411,10 +411,10 @@ impl Listener {
 
         // CTX_TARGET_ID
         // CTX_TARGET_HOST
-        own.insert("CTX_TARGET_ID".into(), cfg.get_id());
+        own.insert("CTX_TARGET_ID".into(), cfg.id());
         own.insert(
             "CTX_TARGET_HOST".into(),
-            cfg.get_uri().unwrap().host().unwrap().to_lowercase(),
+            cfg.uri().unwrap().host().unwrap().to_lowercase(),
         );
 
         ctx.with(own)
@@ -441,17 +441,17 @@ impl Listener {
         ctx: &Context,
     ) {
         for transform in transforms {
-            match &transform.action {
+            match &transform.action() {
                 HeaderTransformActon::Add(key) => {
                     if !headers.contains_key(key) {
-                        let value = transform.value.as_ref().unwrap().as_str();
+                        let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
                         headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
                     }
                 }
                 HeaderTransformActon::Update(key) => {
                     if headers.contains_key(key) {
-                        let value = transform.value.as_ref().unwrap().as_str();
+                        let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
                         headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
                     }
@@ -493,7 +493,7 @@ impl Listener {
             let mut new_resp = Response::builder();
 
             // Set status
-            new_resp = if let Some(status) = cfg.status {
+            new_resp = if let Some(status) = cfg.status() {
                 new_resp.status(status)
             } else {
                 new_resp.status(resp_parts.status)
@@ -501,7 +501,7 @@ impl Listener {
 
             // Prepare headers
             let mut headers = resp_parts.headers;
-            if let Some(transforms) = &cfg.headers {
+            if let Some(transforms) = &cfg.headers() {
                 Listener::transform_headers(&mut headers, transforms, ctx);
             }
             for (k, v) in &headers {
@@ -509,7 +509,7 @@ impl Listener {
             }
 
             // Prepare body
-            let cfg_body = cfg.body.clone();
+            let cfg_body = cfg.body();
             let body: Body = if let Some(body) = cfg_body {
                 let body: String = env_with_context_no_errors(&body, |v| ctx.get(&v.into())).into();
                 Body::from(body)
