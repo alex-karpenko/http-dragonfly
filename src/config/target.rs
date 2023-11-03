@@ -52,6 +52,14 @@ impl TargetConfig {
             })
     }
 
+    pub fn host(&self) -> String {
+        if let Ok(uri) = self.uri() {
+            uri.host().unwrap_or("").to_lowercase()
+        } else {
+            String::new()
+        }
+    }
+
     pub fn url(&self) -> &str {
         self.url.as_ref()
     }

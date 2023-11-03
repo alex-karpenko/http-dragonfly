@@ -412,10 +412,7 @@ impl Listener {
         // CTX_TARGET_ID
         // CTX_TARGET_HOST
         own.insert("CTX_TARGET_ID".into(), cfg.id());
-        own.insert(
-            "CTX_TARGET_HOST".into(),
-            cfg.uri().unwrap().host().unwrap().to_lowercase(),
-        );
+        own.insert("CTX_TARGET_HOST".into(), cfg.host());
 
         ctx.with(own)
     }
