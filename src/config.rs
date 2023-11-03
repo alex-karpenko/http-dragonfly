@@ -55,10 +55,7 @@ impl<'a> AppConfig {
 impl ConfigValidator for AppConfig {
     fn validate(&self) -> Result<(), HttpDragonflyError> {
         for listener in self.listeners() {
-            match listener.validate() {
-                Err(e) => return Err(e),
-                _ => continue,
-            };
+            listener.validate()?;
         }
 
         Ok(())

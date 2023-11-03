@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fmt::Display;
 
-use super::headers::HeaderTransform;
+use super::{headers::HeaderTransform, ConfigValidator};
 
 pub type ResponseStatus = u16;
 
@@ -104,5 +104,11 @@ impl OverrideConfig {
 
     pub fn headers(&self) -> &Option<Vec<HeaderTransform>> {
         &self.headers
+    }
+}
+
+impl ConfigValidator for ResponseConfig {
+    fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
+        Ok(())
     }
 }

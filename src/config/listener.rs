@@ -3,7 +3,6 @@ use serde::{
     Deserialize, Deserializer,
 };
 use std::{
-    collections::HashSet,
     fmt::Display,
     net::{Ipv4Addr, SocketAddr},
     str::FromStr,
@@ -191,8 +190,8 @@ impl<'de> Deserialize<'de> for ListenOn {
 impl ConfigValidator for ListenerConfig {
     fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
         // Make sure all target IDs are unique
-        let ids: HashSet<String> = self.targets().iter().map(TargetConfig::id).collect();
-        if ids.len() != self.targets().len() {
+        let unique_targets_count = self.targets().iter().map(TargetConfig::id).count();
+        if unique_targets_count != self.targets().len() {
             return Err(HttpDragonflyError::InvalidConfig {
                 cause: format!(
                     "all target IDs of the listener `{}` should be unique",
@@ -203,11 +202,11 @@ impl ConfigValidator for ListenerConfig {
 
         // Validate all targets
         for target in self.targets() {
-            match target.validate() {
-                Err(e) => return Err(e),
-                _ => continue,
-            };
+            target.validate()?;
         }
+
+        // Validate response
+        self.response().validate()?;
 
         // Validate strategy requirements
         match self.response().strategy() {
