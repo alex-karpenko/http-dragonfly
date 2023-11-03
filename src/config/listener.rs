@@ -11,7 +11,7 @@ use std::{
 
 use super::{
     headers::HeaderTransform,
-    response::ResponseConfig,
+    response::{ResponseBehavior, ResponseConfig},
     strategy::ResponseStrategy,
     target::{TargetConfig, TargetConfigList},
     ConfigValidator,

@@ -14,7 +14,7 @@ use crate::{
     config::{
         headers::HeadersTransformator,
         listener::ListenerConfig,
-        response::{ResponseBehavior, ResponseStatus},
+        response::ResponseBehavior,
         strategy::ResponseStrategy,
         target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
@@ -42,12 +42,12 @@ impl RequestHandler {
         addr: SocketAddr,
         req: Request<Body>,
     ) -> Result<Response<Body>, Error> {
+        let response_cfg = self.listener_cfg.response();
+
         // Verify is method allowed in the config
         if !self.listener_cfg.is_method_allowed(req.method().as_ref()) {
             debug!("method `{}` rejected", req.method().to_string());
-            return Response::builder()
-                .status(StatusCode::METHOD_NOT_ALLOWED)
-                .body(Body::empty());
+            return response_cfg.empty_response(StatusCode::METHOD_NOT_ALLOWED.into());
         }
 
         // Prepare owned body
@@ -80,7 +80,6 @@ impl RequestHandler {
 
         let mut targets: Vec<&TargetConfig> = vec![];
         let mut conditional_target_id: Option<String> = None;
-        let response_config = self.listener_cfg.response();
 
         // Verify conditions
         for target in self.listener_cfg.targets() {
@@ -107,10 +106,7 @@ impl RequestHandler {
                                     targets.push(target);
                                 } else {
                                     // Error - more than one target has true condition
-                                    let empty = Response::builder()
-                                        .status(response_config.no_targets_status())
-                                        .body(Body::empty())?;
-                                    return Ok(response_config.override_response(empty, &ctx));
+                                    return response_cfg.no_target_response(&ctx);
                                 }
                             }
                         }
@@ -200,10 +196,10 @@ impl RequestHandler {
                     let target = targets[pos];
                     let resp = match target.on_error() {
                         TargetOnErrorAction::Propagate => {
-                            Some(self.build_error_response(e, &target.error_status()))
+                            Some(response_cfg.error_response(e, &target.error_status()))
                         }
                         TargetOnErrorAction::Status => {
-                            Some(self.build_error_response(e, &target.error_status()))
+                            Some(response_cfg.error_response(e, &target.error_status()))
                         }
                         TargetOnErrorAction::Drop => None,
                     };
@@ -213,179 +209,53 @@ impl RequestHandler {
         }
 
         // Select/create response according to strategy
-        let ok_target_id = response_config.find_first_response(&responses, false);
-        let failed_target_id = response_config.find_first_response(&responses, true);
-        let selector_target_id = response_config.target_selector().clone();
-        let resp = match &self.listener_cfg.strategy() {
-            ResponseStrategy::AlwaysOverride => {
-                let empty = Response::new(Body::empty());
-                response_config.override_response(empty, &ctx)
-            }
-            ResponseStrategy::AlwaysTargetId => {
-                let target_id = selector_target_id.unwrap();
-                let (resp, ctx) = responses.remove(&target_id).unwrap();
-                if let Some(resp) = resp {
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else {
-                    let empty = Response::builder()
-                        .status(response_config.no_targets_status())
-                        .body(Body::empty())?;
-                    response_config.override_response(empty, ctx)
+        let ok_target_id = response_cfg.find_first_response(&responses, false);
+        let failed_target_id = response_cfg.find_first_response(&responses, true);
+        let selector_target_id = response_cfg.target_selector().clone();
+        let resp =
+            match &self.listener_cfg.strategy() {
+                ResponseStrategy::AlwaysOverride => {
+                    response_cfg.override_empty_response(StatusCode::OK.into(), &ctx)?
                 }
-            }
-            ResponseStrategy::OkThenOverride => {
-                if let Some(ok_target_id) = ok_target_id {
-                    let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else {
-                    let empty = Response::new(Body::empty());
-                    response_config.override_response(empty, &ctx)
-                }
-            }
-            ResponseStrategy::FailedThenOverride => {
-                if let Some(failed_target_id) = failed_target_id {
-                    let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else {
-                    let empty = Response::new(Body::empty());
-                    response_config.override_response(empty, &ctx)
-                }
-            }
-            ResponseStrategy::OkThenTargetId => {
-                if let Some(ok_target_id) = ok_target_id {
-                    let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else {
-                    let target_id = selector_target_id.unwrap();
-                    let (resp, ctx) = responses.remove(&target_id).unwrap();
-                    if let Some(resp) = resp {
-                        let ctx = ctx.with_response(&resp);
-                        response_config.override_response(resp, &ctx)
-                    } else {
-                        let empty = Response::builder()
-                            .status(response_config.no_targets_status())
-                            .body(Body::empty())?;
-                        response_config.override_response(empty, ctx)
-                    }
-                }
-            }
-            ResponseStrategy::FailedThenTargetId => {
-                if let Some(failed_target_id) = failed_target_id {
-                    let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else {
-                    let target_id = selector_target_id.unwrap();
-                    let (resp, ctx) = responses.remove(&target_id).unwrap();
-                    if let Some(resp) = resp {
-                        let ctx = ctx.with_response(&resp);
-                        response_config.override_response(resp, &ctx)
-                    } else {
-                        let empty = Response::builder()
-                            .status(response_config.no_targets_status())
-                            .body(Body::empty())?;
-                        response_config.override_response(empty, ctx)
-                    }
-                }
-            }
-            ResponseStrategy::OkThenFailed => {
-                if let Some(ok_target_id) = ok_target_id {
-                    let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else if let Some(failed_target_id) = failed_target_id {
-                    let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
-                    if let Some(resp) = resp {
-                        let ctx = ctx.with_response(&resp);
-                        response_config.override_response(resp, &ctx)
-                    } else {
-                        let empty = Response::builder()
-                            .status(response_config.no_targets_status())
-                            .body(Body::empty())?;
-                        response_config.override_response(empty, ctx)
-                    }
-                } else {
-                    let empty = Response::builder()
-                        .status(response_config.no_targets_status())
-                        .body(Body::empty())?;
-                    response_config.override_response(empty, &ctx)
-                }
-            }
-            ResponseStrategy::FailedThenOk => {
-                if let Some(failed_target_id) = failed_target_id {
-                    let (resp, ctx) = responses.remove(&failed_target_id).unwrap();
-                    let resp = resp.unwrap();
-                    let ctx = ctx.with_response(&resp);
-                    response_config.override_response(resp, &ctx)
-                } else if let Some(ok_target_id) = ok_target_id {
-                    let (resp, ctx) = responses.remove(&ok_target_id).unwrap();
-                    if let Some(resp) = resp {
-                        let ctx = ctx.with_response(&resp);
-                        response_config.override_response(resp, &ctx)
-                    } else {
-                        let empty = Response::builder()
-                            .status(response_config.no_targets_status())
-                            .body(Body::empty())?;
-                        response_config.override_response(empty, ctx)
-                    }
-                } else {
-                    let empty = Response::builder()
-                        .status(response_config.no_targets_status())
-                        .body(Body::empty())?;
-                    response_config.override_response(empty, &ctx)
-                }
-            }
-            ResponseStrategy::ConditionalRouting => {
-                if let Some(target_id) = conditional_target_id {
-                    let (resp, ctx) = responses.remove(&target_id).unwrap();
-                    if let Some(resp) = resp {
-                        let ctx = ctx.with_response(&resp);
-                        response_config.override_response(resp, &ctx)
-                    } else {
-                        let empty = Response::builder()
-                            .status(response_config.no_targets_status())
-                            .body(Body::empty())?;
-                        response_config.override_response(empty, ctx)
-                    }
-                } else {
-                    let empty = Response::builder()
-                        .status(response_config.no_targets_status())
-                        .body(Body::empty())?;
-                    response_config.override_response(empty, &ctx)
-                }
-            }
-        };
+                ResponseStrategy::OkThenOverride => response_cfg
+                    .select_target_or_override_response(ok_target_id, &mut responses, &ctx),
+                ResponseStrategy::FailedThenOverride => response_cfg
+                    .select_target_or_override_response(failed_target_id, &mut responses, &ctx),
+                ResponseStrategy::OkThenTargetId => response_cfg.select_from_two_targets_response(
+                    ok_target_id,
+                    selector_target_id,
+                    &mut responses,
+                    &ctx,
+                ),
+                ResponseStrategy::FailedThenTargetId => response_cfg
+                    .select_from_two_targets_response(
+                        failed_target_id,
+                        selector_target_id,
+                        &mut responses,
+                        &ctx,
+                    ),
+                ResponseStrategy::OkThenFailed => response_cfg.select_from_two_targets_response(
+                    ok_target_id,
+                    failed_target_id,
+                    &mut responses,
+                    &ctx,
+                ),
+                ResponseStrategy::FailedThenOk => response_cfg.select_from_two_targets_response(
+                    failed_target_id,
+                    ok_target_id,
+                    &mut responses,
+                    &ctx,
+                ),
+                ResponseStrategy::AlwaysTargetId => response_cfg.select_target_or_error_response(
+                    selector_target_id,
+                    &mut responses,
+                    &ctx,
+                ),
+                ResponseStrategy::ConditionalRouting => response_cfg
+                    .select_target_or_error_response(conditional_target_id, &mut responses, &ctx),
+            };
 
         // Final response
         Ok(resp)
-    }
-
-    fn build_error_response(
-        &self,
-        e: HyperError,
-        status: &Option<ResponseStatus>,
-    ) -> Response<Body> {
-        let resp = Response::builder();
-
-        let resp = if let Some(status) = status.to_owned() {
-            resp.status(status)
-        } else if e.is_connect() || e.is_closed() {
-            resp.status(502)
-        } else if e.is_timeout() {
-            resp.status(504)
-        } else {
-            resp.status(500)
-        };
-
-        resp.body(Body::empty()).unwrap()
     }
 }
