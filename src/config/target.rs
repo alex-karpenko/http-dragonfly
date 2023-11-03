@@ -9,7 +9,7 @@ use tracing::error;
 
 use crate::errors::HttpDragonflyError;
 
-use super::{headers::HeaderTransform, response::ResponseStatus};
+use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator};
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 
@@ -188,5 +188,38 @@ impl ConditionFilter {
                 cause: "invalid conditional expression".into(),
             })
         }
+    }
+}
+
+impl ConfigValidator for TargetConfig {
+    fn validate(&self) -> Result<(), HttpDragonflyError> {
+        // Validate URIs
+        self.uri()?;
+
+        // Validate target's error response override
+        match self.on_error() {
+            TargetOnErrorAction::Propagate | TargetOnErrorAction::Drop => {
+                if self.error_status().is_some() {
+                    return Err(HttpDragonflyError::InvalidConfig {
+                        cause: format!(
+                            "`error_status` can be set if `on_error` is `status` only, target `{}`",
+                            self.id()
+                        ),
+                    });
+                }
+            }
+            TargetOnErrorAction::Status => {
+                if self.error_status().is_none() {
+                    return Err(HttpDragonflyError::InvalidConfig {
+                        cause: format!(
+                            "`error_status` should be set if `on_error` is `status`, target `{}`",
+                            self.id()
+                        ),
+                    });
+                }
+            }
+        }
+
+        Ok(())
     }
 }

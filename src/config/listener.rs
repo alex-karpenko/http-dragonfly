@@ -3,13 +3,21 @@ use serde::{
     Deserialize, Deserializer,
 };
 use std::{
+    collections::HashSet,
     fmt::Display,
     net::{Ipv4Addr, SocketAddr},
     str::FromStr,
     time::Duration,
 };
 
-use super::{headers::HeaderTransform, response::ResponseConfig, target::TargetConfig};
+use crate::{config::target::TargetConditionConfig, errors::HttpDragonflyError};
+
+use super::{
+    headers::HeaderTransform,
+    response::{ResponseConfig, ResponseStrategy},
+    target::TargetConfig,
+    ConfigValidator,
+};
 
 const DEFAULT_LISTENER_PORT: u16 = 8080;
 pub const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
@@ -177,5 +185,79 @@ impl<'de> Deserialize<'de> for ListenOn {
         }
 
         deserializer.deserialize_string(ListenOnVisitor)
+    }
+}
+
+impl ConfigValidator for ListenerConfig {
+    fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
+        // Make sure all target IDs are unique
+        let ids: HashSet<String> = self.targets().iter().map(TargetConfig::id).collect();
+        if ids.len() != self.targets().len() {
+            return Err(HttpDragonflyError::InvalidConfig {
+                cause: format!(
+                    "all target IDs of the listener `{}` should be unique",
+                    self.name()
+                ),
+            });
+        }
+
+        // Validate all targets
+        for target in self.targets() {
+            match target.validate() {
+                Err(e) => return Err(e),
+                _ => continue,
+            };
+        }
+
+        // Validate strategy requirements
+        match self.response().strategy() {
+            ResponseStrategy::ConditionalRouting => {
+                // Make sure that all targets have condition defined if strategy is conditional_routing
+                if self.targets().iter().any(|t| t.condition().is_none()) {
+                    return Err(HttpDragonflyError::InvalidConfig {
+                        cause: format!("all targets of the listener `{}` must have condition defined because strategy is `{}`", self.name(), self.response().strategy()),
+                    });
+                }
+                // Ensure singe default condition is present
+                let default_count = self
+                    .targets()
+                    .iter()
+                    .filter(|t| {
+                        matches!(
+                            t.condition().as_ref().unwrap(),
+                            TargetConditionConfig::Default
+                        )
+                    })
+                    .count();
+                if default_count > 1 {
+                    return Err(HttpDragonflyError::InvalidConfig {
+                        cause: format!(
+                            "more than one default target is defined of the listener `{}` but only one is allowed",
+                            self.name()
+                        ),
+                    });
+                }
+            }
+            ResponseStrategy::AlwaysTargetId
+            | ResponseStrategy::FailedThenTargetId
+            | ResponseStrategy::OkThenTargetId => {
+                // Make sure that target_selector has valid target_id specified if strategy is *_target_id
+                let target_ids: Vec<String> = self.targets().iter().map(TargetConfig::id).collect();
+                if let Some(target_id) = &self.response().target_selector() {
+                    if !target_ids.contains(target_id) {
+                        return Err(HttpDragonflyError::InvalidConfig {
+                            cause: format!("`target_selector` points to unknown target_id `{}` in the listener `{}`", target_id, self.name()),
+                        });
+                    }
+                } else {
+                    return Err(HttpDragonflyError::InvalidConfig {
+                        cause: format!("`target_selector` should be specified for strategy `{}` in the listener `{}`", self.response().strategy(), self.name()),
+                    });
+                }
+            }
+            _ => {}
+        };
+
+        Ok(())
     }
 }
