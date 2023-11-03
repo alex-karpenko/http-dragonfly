@@ -2,18 +2,18 @@ mod cli;
 mod config;
 mod context;
 mod errors;
-mod listener;
+mod handler;
 
 use cli::CliConfig;
 use config::{listener::ListenerConfig, AppConfig};
 use context::{Context, RootOsEnvironment};
 use futures_util::future::join_all;
+use handler::RequestHandler;
 use hyper::{
     server::conn::AddrStream,
     service::{make_service_fn, service_fn},
     Server,
 };
-use listener::Listener;
 use std::{convert::Infallible, error::Error, sync::Arc};
 use tokio::{
     select,
@@ -37,15 +37,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let name = cfg.name();
 
         let ctx = root_ctx.clone();
+        let cfg = cfg.clone();
+        let listener = RequestHandler::new(*cfg, *ctx);
         let make_service = make_service_fn(move |conn: &AddrStream| {
             let addr = conn.remote_addr();
-            let cfg = cfg.clone();
-            let ctx = ctx.clone();
-            let service = service_fn(move |req| Listener::handler(*cfg, *ctx, addr, req));
+            let service = service_fn(move |req| listener.handle(addr, req));
 
             async move { Ok::<_, Infallible>(service) }
         });
-
         let server = server
             .serve(make_service)
             .with_graceful_shutdown(shutdown_signal(name));

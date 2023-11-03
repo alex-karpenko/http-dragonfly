@@ -1,13 +1,14 @@
-use hyper::Uri;
+use hyper::{body::Bytes, http::request::Parts, Uri};
 use jaq_interpret::{Ctx, Filter, FilterT, ParseCtx, RcIter, Val};
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
 };
-use std::time::Duration;
-use tracing::error;
+use serde_json::{json, Value};
+use std::{collections::HashMap, time::Duration};
+use tracing::{debug, error};
 
-use crate::errors::HttpDragonflyError;
+use crate::{context::Context, errors::HttpDragonflyError};
 
 use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator};
 
@@ -242,5 +243,50 @@ impl ConfigValidator for [TargetConfig] {
         }
 
         Ok(())
+    }
+}
+
+pub trait TargetBehavior {
+    fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool;
+}
+
+impl TargetBehavior for TargetConfig {
+    fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool {
+        // Input content
+        // .body
+        // .env{}
+        // .request.headers{}
+        // .request.uri.full
+        // .request.uri.host
+        // .request.uri.path
+        // .request.uri.query
+        let body: Value = serde_json::from_slice(body).unwrap_or(json!({}));
+        let headers: HashMap<String, String> = req
+            .headers
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string()))
+            .collect();
+        let env = ctx.iter().collect::<HashMap<&String, &String>>();
+        let input = json!({
+            "body": body,
+            "env": env,
+            "request": {
+                "headers": headers,
+                "uri": {
+                    "full": req.uri.to_string(),
+                    "host": req.uri.host(),
+                    "path": req.uri.path(),
+                    "query": req.uri.query()
+                }
+            }
+        });
+
+        debug!("{:?}", input);
+
+        if let TargetConditionConfig::Filter(filter) = self.condition().as_ref().unwrap() {
+            filter.run(input)
+        } else {
+            false
+        }
     }
 }

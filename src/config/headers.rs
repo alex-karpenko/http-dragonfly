@@ -1,7 +1,14 @@
+use hyper::header::HeaderValue;
+use hyper::HeaderMap;
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
+use shellexpand::env_with_context_no_errors;
+
+use crate::context::Context;
+
+pub type HeadersTransformsList = Vec<HeaderTransform>;
 
 #[derive(Debug, Clone)]
 pub struct HeaderTransform {
@@ -112,5 +119,39 @@ impl<'de> Deserialize<'de> for HeaderTransform {
 
         const FIELDS: &[&str] = &["add", "drop", "update", "value"];
         deserializer.deserialize_struct("HeaderAction", FIELDS, HeaderTransformVisitor)
+    }
+}
+
+pub trait HeadersTransformator {
+    fn transform(&'static self, headers: &mut HeaderMap, ctx: &Context);
+}
+
+impl HeadersTransformator for HeadersTransformsList {
+    fn transform(&'static self, headers: &mut HeaderMap, ctx: &Context) {
+        for transform in self {
+            match transform.action() {
+                HeaderTransformActon::Add(key) => {
+                    if !headers.contains_key(key.clone()) {
+                        let value = transform.value().as_ref().unwrap().as_str();
+                        let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
+                        headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                    }
+                }
+                HeaderTransformActon::Update(key) => {
+                    if headers.contains_key(key) {
+                        let value = transform.value().as_ref().unwrap().as_str();
+                        let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
+                        headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                    }
+                }
+                HeaderTransformActon::Drop(key) => {
+                    if key == "*" {
+                        headers.clear();
+                    } else {
+                        headers.remove(key);
+                    }
+                }
+            };
+        }
     }
 }
