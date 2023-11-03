@@ -196,7 +196,7 @@ impl RequestHandler {
                     let target = targets[pos];
                     let resp = match target.on_error() {
                         TargetOnErrorAction::Propagate => {
-                            Some(response_cfg.error_response(e, &target.error_status()))
+                            Some(response_cfg.error_response(e, &None))
                         }
                         TargetOnErrorAction::Status => {
                             Some(response_cfg.error_response(e, &target.error_status()))

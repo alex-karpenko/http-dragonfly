@@ -2,6 +2,7 @@ use hyper::{http::Error, Body, Error as HyperError, Response, StatusCode};
 use regex::Regex;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
+use tracing::debug;
 
 use crate::{context::Context, handler::ResponsesMap};
 
@@ -149,6 +150,12 @@ impl ResponseBehavior for ResponseConfig {
     fn error_response(&self, e: HyperError, status: &Option<ResponseStatus>) -> Response<Body> {
         let resp = Response::builder();
 
+        debug!(
+            "is_connect={}, is_closed={}, is_timeout={}",
+            e.is_connect(),
+            e.is_closed(),
+            e.is_timeout()
+        );
         let resp = if let Some(status) = status.to_owned() {
             resp.status(status)
         } else if e.is_connect() || e.is_closed() {
@@ -188,15 +195,21 @@ impl ResponseBehavior for ResponseConfig {
         ctx: &Context,
     ) -> Response<Body> {
         if let Some(target_id) = first_target_id {
-            let (resp, ctx) = responses.remove(&target_id).unwrap();
-            let resp = resp.unwrap();
-            let ctx = ctx.with_response(&resp);
-            self.override_response(resp, &ctx)
-        } else if let Some(target_id) = second_target_id {
-            let (resp, ctx) = responses.remove(&target_id).unwrap();
-            if let Some(resp) = resp {
+            if let Some((resp, ctx)) = responses.remove(&target_id) {
+                let resp = resp.unwrap();
                 let ctx = ctx.with_response(&resp);
                 self.override_response(resp, &ctx)
+            } else {
+                self.select_from_two_targets_response(None, second_target_id, responses, ctx)
+            }
+        } else if let Some(target_id) = second_target_id {
+            if let Some((resp, ctx)) = responses.remove(&target_id) {
+                if let Some(resp) = resp {
+                    let ctx = ctx.with_response(&resp);
+                    self.override_response(resp, &ctx)
+                } else {
+                    self.no_target_response(ctx).unwrap()
+                }
             } else {
                 self.no_target_response(ctx).unwrap()
             }
@@ -212,10 +225,14 @@ impl ResponseBehavior for ResponseConfig {
         ctx: &Context,
     ) -> Response<Body> {
         if let Some(target_id) = target_id {
-            let (resp, ctx) = responses.remove(&target_id).unwrap();
-            let resp = resp.unwrap();
-            let ctx = ctx.with_response(&resp);
-            self.override_response(resp, &ctx)
+            if let Some((resp, ctx)) = responses.remove(&target_id) {
+                let resp = resp.unwrap();
+                let ctx = ctx.with_response(&resp);
+                self.override_response(resp, &ctx)
+            } else {
+                self.override_empty_response(StatusCode::OK.into(), ctx)
+                    .unwrap()
+            }
         } else {
             self.override_empty_response(StatusCode::OK.into(), ctx)
                 .unwrap()
@@ -229,10 +246,13 @@ impl ResponseBehavior for ResponseConfig {
         ctx: &Context,
     ) -> Response<Body> {
         if let Some(target_id) = target_id {
-            let (resp, ctx) = responses.remove(&target_id).unwrap();
-            if let Some(resp) = resp {
-                let ctx = ctx.with_response(&resp);
-                self.override_response(resp, &ctx)
+            if let Some((resp, ctx)) = responses.remove(&target_id) {
+                if let Some(resp) = resp {
+                    let ctx = ctx.with_response(&resp);
+                    self.override_response(resp, &ctx)
+                } else {
+                    self.no_target_response(ctx).unwrap()
+                }
             } else {
                 self.no_target_response(ctx).unwrap()
             }
