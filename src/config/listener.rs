@@ -9,17 +9,16 @@ use std::{
     time::Duration,
 };
 
-use crate::{config::target::TargetConditionConfig, errors::HttpDragonflyError};
-
 use super::{
     headers::HeaderTransform,
-    response::{ResponseConfig, ResponseStrategy},
-    target::TargetConfig,
+    response::ResponseConfig,
+    strategy::ResponseStrategy,
+    target::{TargetConfig, TargetConfigList},
     ConfigValidator,
 };
 
 const DEFAULT_LISTENER_PORT: u16 = 8080;
-pub const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
+const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
 const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 
 #[derive(Deserialize, Debug)]
@@ -33,9 +32,11 @@ pub struct ListenerConfig {
         default = "ListenerConfig::default_listener_timeout"
     )]
     timeout: Duration,
+    #[serde(default)]
+    strategy: ResponseStrategy,
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<Vec<String>>,
-    targets: Vec<TargetConfig>,
+    targets: TargetConfigList,
     #[serde(default)]
     response: ResponseConfig,
 }
@@ -87,6 +88,9 @@ impl ListenerConfig {
     /// Returns a reference to the response of this [`ListenerConfig`].
     pub fn response(&self) -> &ResponseConfig {
         &self.response
+    }
+    pub fn strategy(&self) -> &ResponseStrategy {
+        &self.strategy
     }
 }
 
@@ -189,73 +193,12 @@ impl<'de> Deserialize<'de> for ListenOn {
 
 impl ConfigValidator for ListenerConfig {
     fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
-        // Make sure all target IDs are unique
-        let unique_targets_count = self.targets().iter().map(TargetConfig::id).count();
-        if unique_targets_count != self.targets().len() {
-            return Err(HttpDragonflyError::InvalidConfig {
-                cause: format!(
-                    "all target IDs of the listener `{}` should be unique",
-                    self.name()
-                ),
-            });
-        }
-
-        // Validate all targets
-        for target in self.targets() {
-            target.validate()?;
-        }
-
-        // Validate response
+        self.targets().validate()?;
         self.response().validate()?;
 
         // Validate strategy requirements
-        match self.response().strategy() {
-            ResponseStrategy::ConditionalRouting => {
-                // Make sure that all targets have condition defined if strategy is conditional_routing
-                if self.targets().iter().any(|t| t.condition().is_none()) {
-                    return Err(HttpDragonflyError::InvalidConfig {
-                        cause: format!("all targets of the listener `{}` must have condition defined because strategy is `{}`", self.name(), self.response().strategy()),
-                    });
-                }
-                // Ensure singe default condition is present
-                let default_count = self
-                    .targets()
-                    .iter()
-                    .filter(|t| {
-                        matches!(
-                            t.condition().as_ref().unwrap(),
-                            TargetConditionConfig::Default
-                        )
-                    })
-                    .count();
-                if default_count > 1 {
-                    return Err(HttpDragonflyError::InvalidConfig {
-                        cause: format!(
-                            "more than one default target is defined of the listener `{}` but only one is allowed",
-                            self.name()
-                        ),
-                    });
-                }
-            }
-            ResponseStrategy::AlwaysTargetId
-            | ResponseStrategy::FailedThenTargetId
-            | ResponseStrategy::OkThenTargetId => {
-                // Make sure that target_selector has valid target_id specified if strategy is *_target_id
-                let target_ids: Vec<String> = self.targets().iter().map(TargetConfig::id).collect();
-                if let Some(target_id) = &self.response().target_selector() {
-                    if !target_ids.contains(target_id) {
-                        return Err(HttpDragonflyError::InvalidConfig {
-                            cause: format!("`target_selector` points to unknown target_id `{}` in the listener `{}`", target_id, self.name()),
-                        });
-                    }
-                } else {
-                    return Err(HttpDragonflyError::InvalidConfig {
-                        cause: format!("`target_selector` should be specified for strategy `{}` in the listener `{}`", self.response().strategy(), self.name()),
-                    });
-                }
-            }
-            _ => {}
-        };
+        self.strategy()
+            .validate(self.targets(), self.response().target_selector())?;
 
         Ok(())
     }

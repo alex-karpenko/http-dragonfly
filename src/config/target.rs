@@ -13,6 +13,8 @@ use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator}
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 
+pub type TargetConfigList = Vec<TargetConfig>;
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct TargetConfig {
@@ -218,6 +220,25 @@ impl ConfigValidator for TargetConfig {
                     });
                 }
             }
+        }
+
+        Ok(())
+    }
+}
+
+impl ConfigValidator for [TargetConfig] {
+    fn validate(&self) -> Result<(), HttpDragonflyError> {
+        // Validate each target
+        for target in self {
+            target.validate()?;
+        }
+
+        // Make sure all targets have unique ID
+        let unique_targets_count = self.iter().map(TargetConfig::id).count();
+        if unique_targets_count != self.len() {
+            return Err(HttpDragonflyError::InvalidConfig {
+                cause: "all target IDs of the listener should be unique".into(),
+            });
         }
 
         Ok(())

@@ -15,7 +15,8 @@ use crate::{
     config::{
         headers::{HeaderTransform, HeaderTransformActon},
         listener::ListenerConfig,
-        response::{OverrideConfig, ResponseStatus, ResponseStrategy},
+        response::{OverrideConfig, ResponseStatus},
+        strategy::ResponseStrategy,
         target::{ConditionFilter, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
     context::{Context, ContextMap},
@@ -55,11 +56,7 @@ impl Listener {
         debug!("request headers: {:?}", headers);
 
         // Process targets
-        debug!(
-            "Listener={}, strategy={}",
-            cfg.name(),
-            cfg.response().strategy()
-        );
+        debug!("Listener={}, strategy={}", cfg.name(), cfg.strategy());
 
         let mut target_requests = vec![];
         let mut target_ctx = vec![];
@@ -70,7 +67,7 @@ impl Listener {
 
         // Verify conditions
         for target in cfg.targets() {
-            match &cfg.response().strategy() {
+            match &cfg.strategy() {
                 // Special flow in case of conditional routing
                 ResponseStrategy::ConditionalRouting => {
                     match target.condition().as_ref().unwrap() {
@@ -218,7 +215,7 @@ impl Listener {
         let failed_target_id =
             Listener::find_first_response(&responses, cfg.response().failed_status_regex(), true);
         let selector_target_id = cfg.response().target_selector().clone();
-        let resp = match &cfg.response().strategy() {
+        let resp = match &cfg.strategy() {
             ResponseStrategy::AlwaysOverride => {
                 let empty = Response::new(Body::empty());
                 Listener::override_response(empty, &ctx, cfg.response().override_config())

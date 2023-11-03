@@ -1,6 +1,7 @@
 pub mod headers;
 pub mod listener;
 pub mod response;
+pub mod strategy;
 pub mod target;
 
 use figment::{
