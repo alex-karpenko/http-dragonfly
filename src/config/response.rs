@@ -1,4 +1,4 @@
-use hyper::{http::Error, Body, Error as HyperError, Response, StatusCode};
+use hyper::{http::Error, Body, Error as HyperError, Response, StatusCode, header::CONTENT_LENGTH};
 use regex::Regex;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
@@ -112,8 +112,9 @@ impl ResponseBehavior for ResponseConfig {
             }
 
             // Prepare body
-            let cfg_body = &cfg.body;
-            let body: Body = if let Some(body) = cfg_body {
+            let body: Body = if let Some(body) = &cfg.body {
+                // Remove Content-length header since it's incorrect now
+                headers.remove(CONTENT_LENGTH);
                 let body: String = env_with_context_no_errors(&body, |v| ctx.get(&v.into())).into();
                 Body::from(body)
             } else {
