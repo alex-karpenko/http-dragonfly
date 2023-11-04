@@ -1,13 +1,13 @@
-use std::fmt::Display;
-
 use serde::Deserialize;
+use strum_macros::Display;
 
 use crate::{config::target::TargetConditionConfig, errors::HttpDragonflyError};
 
 use super::target::TargetConfig;
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Display)]
 #[serde(deny_unknown_fields, rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum ResponseStrategy {
     AlwaysOverride,
     AlwaysTargetId,
@@ -19,26 +19,6 @@ pub enum ResponseStrategy {
     #[default]
     FailedThenOverride,
     ConditionalRouting,
-}
-
-impl Display for ResponseStrategy {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ResponseStrategy::AlwaysOverride => "always_override",
-                ResponseStrategy::AlwaysTargetId => "always_target_id",
-                ResponseStrategy::OkThenFailed => "ok_then_failed",
-                ResponseStrategy::OkThenTargetId => "ok_then_target_id",
-                ResponseStrategy::OkThenOverride => "ok_then_override",
-                ResponseStrategy::FailedThenOk => "failed_then_ok",
-                ResponseStrategy::FailedThenTargetId => "failed_then_target_id",
-                ResponseStrategy::FailedThenOverride => "failed_then_override",
-                ResponseStrategy::ConditionalRouting => "conditional_routing",
-            }
-        )
-    }
 }
 
 impl ResponseStrategy {
