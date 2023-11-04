@@ -132,6 +132,11 @@ impl ResponseBehavior for ResponseConfig {
         responses: &ResponsesMap,
         look_for_failed: bool,
     ) -> Option<String> {
+        debug!(
+            "looking for {}",
+            if look_for_failed { "failed" } else { "ok" }
+        );
+
         let re = Regex::new(&self.failed_status_regex).unwrap();
         for key in responses.keys() {
             let (resp, _) = responses.get(key).unwrap();
@@ -139,23 +144,18 @@ impl ResponseBehavior for ResponseConfig {
                 let status: String = resp.status().to_string();
                 if re.is_match(&status) == look_for_failed {
                     // Return first non-failed response target_id
+                    debug!("found target id={}", key);
                     return Some(key.into());
                 }
             }
         }
 
+        debug!("not found any target");
         None
     }
 
     fn error_response(&self, e: HyperError, status: &Option<ResponseStatus>) -> Response<Body> {
         let resp = Response::builder();
-
-        debug!(
-            "is_connect={}, is_closed={}, is_timeout={}",
-            e.is_connect(),
-            e.is_closed(),
-            e.is_timeout()
-        );
         let resp = if let Some(status) = status.to_owned() {
             resp.status(status)
         } else if e.is_connect() || e.is_closed() {

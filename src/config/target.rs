@@ -4,7 +4,7 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
 };
-use serde_json::{json, Value};
+use serde_json::{json, value::Value as JsonValue, Value};
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
 
@@ -108,7 +108,7 @@ pub enum TargetConditionConfig {
 }
 
 impl TargetConditionConfig {
-    pub fn from_str(value: &str) -> Result<Self, HttpDragonflyError> {
+    fn from_str(value: &str) -> Result<Self, HttpDragonflyError> {
         match value {
             "default" => Ok(TargetConditionConfig::Default),
             _ => Ok(TargetConditionConfig::Filter(ConditionFilter::from_str(
@@ -162,7 +162,8 @@ impl From<&str> for ConditionFilter {
     }
 }
 impl ConditionFilter {
-    fn run(&self, input: serde_json::value::Value) -> bool {
+    fn run(&self, input: JsonValue) -> bool {
+        debug!("input=`{:#?}`", input);
         let inputs = RcIter::new(core::iter::empty());
         let out = self.filter.run((Ctx::new([], &inputs), Val::from(input)));
 
@@ -170,10 +171,14 @@ impl ConditionFilter {
             .map(|v| format!("{}", v.unwrap_or(Val::Bool(false))))
             .collect();
 
-        out.len() == 1 && out[0] == "true"
+        let result = out.len() == 1 && out[0] == "true";
+        debug!("result=`{result}`");
+
+        result
     }
 
     fn from_str(value: &str) -> Result<Self, HttpDragonflyError> {
+        debug!("filter=`{value}`");
         let mut defs = ParseCtx::new(Vec::new());
         let (f, errs) = jaq_parse::parse(value, jaq_parse::main());
         if !errs.is_empty() {
@@ -284,8 +289,6 @@ impl TargetBehavior for TargetConfig {
                 }
             }
         });
-
-        debug!("{:?}", input);
 
         if let TargetConditionConfig::Filter(filter) = self.condition().as_ref().unwrap() {
             filter.run(input)

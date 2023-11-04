@@ -92,6 +92,10 @@ impl ListenerConfig {
     pub fn strategy(&self) -> &ResponseStrategy {
         &self.strategy
     }
+
+    pub fn on(&self) -> String {
+        format!("{}", self.listen_on)
+    }
 }
 
 #[derive(Deserialize, Debug)]

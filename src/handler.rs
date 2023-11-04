@@ -8,7 +8,8 @@ use hyper_tls::HttpsConnector;
 
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
-use tracing::debug;
+use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 use crate::{
     config::{
@@ -23,7 +24,7 @@ use crate::{
 
 pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Body>>, &'a Context<'a>)>;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct RequestHandler {
     pub listener_cfg: &'static ListenerConfig,
     pub root_ctx: &'static Context<'static>,
@@ -31,6 +32,7 @@ pub struct RequestHandler {
 
 impl RequestHandler {
     pub fn new(cfg: &'static ListenerConfig, ctx: &'static Context) -> Self {
+        info!("Creating listener: {}, on: {}", cfg.name(), cfg.on());
         Self {
             listener_cfg: cfg,
             root_ctx: ctx,
@@ -42,22 +44,34 @@ impl RequestHandler {
         addr: SocketAddr,
         req: Request<Body>,
     ) -> Result<Response<Body>, Error> {
+        let req_id = Uuid::new_v4();
+        info!(
+            "{req_id}: accepted from: {}, to: {}",
+            addr,
+            self.listener_cfg.name()
+        );
+
         let response_cfg = self.listener_cfg.response();
 
         // Verify is method allowed in the config
         if !self.listener_cfg.is_method_allowed(req.method().as_ref()) {
-            debug!("method `{}` rejected", req.method().to_string());
+            warn!(
+                "{req_id}: rejected, not allowed method: {}, listener: {}",
+                req.method(),
+                self.listener_cfg.name()
+            );
             return response_cfg.empty_response(StatusCode::METHOD_NOT_ALLOWED.into());
         }
 
         // Prepare owned body
         let (req_parts, req_body) = req.into_parts();
-        let body_bytes = hyper::body::to_bytes(req_body).await.unwrap();
+        let body_bytes = hyper::body::to_bytes(req_body)
+            .await
+            .expect("Looks like a BUG!");
         // Add own context - listener + request
         let ctx = self
             .root_ctx
             .with_request(&addr, &req_parts, self.listener_cfg.name());
-        //debug!("request context: {:?}", ctx);
 
         // Prepare new headers
         let mut headers = req_parts.headers.clone();
@@ -106,6 +120,7 @@ impl RequestHandler {
                                     targets.push(target);
                                 } else {
                                     // Error - more than one target has true condition
+                                    warn!("{req_id}: not routed: more than one targets satisfy condition, listener: {}, targets: `{}` and `{}`", self.listener_cfg.name(), targets[0].id(), target.id());
                                     return response_cfg.no_target_response(&ctx);
                                 }
                             }
@@ -133,6 +148,13 @@ impl RequestHandler {
             }
         }
 
+        if targets.is_empty() {
+            warn!(
+                "{req_id}: no targets satisfy conditions, listener: {}",
+                self.listener_cfg.name()
+            );
+        }
+
         for target in targets.iter() {
             let ctx = ctx.with_target(target);
             let target_request_builder = Request::builder();
@@ -149,9 +171,10 @@ impl RequestHandler {
             }
             // Add Host header if empty
             if !headers.contains_key(HOST) {
-                debug!("add host header");
                 let host: Uri = url.parse()?;
                 let host = host.host().unwrap();
+
+                debug!("add host header: {host}");
                 headers.insert(HOST, HeaderValue::from_str(host)?);
             }
             // Insert all headers into request
@@ -167,7 +190,11 @@ impl RequestHandler {
             };
 
             // Put request to queue
-            debug!("target `{}` request: {:?}", target.id(), target_request);
+            debug!(
+                "add to queue: target `{}` request: {:?}",
+                target.id(),
+                target_request
+            );
 
             // Make a connector
             let mut http_connector = HttpConnector::new();
@@ -188,11 +215,11 @@ impl RequestHandler {
         for (pos, res) in results.into_iter().enumerate() {
             match res {
                 Ok(resp) => {
-                    debug!("OK: {:#?}", resp);
+                    debug!("OK response: {:#?}", resp);
                     responses.insert(target_ids[pos].clone(), (Some(resp), &target_ctx[pos]));
                 }
                 Err(e) => {
-                    debug!("ERR: {:#?}", e);
+                    debug!("ERR response: {:#?}", e);
                     let target = targets[pos];
                     let resp = match target.on_error() {
                         TargetOnErrorAction::Propagate => {
@@ -256,6 +283,8 @@ impl RequestHandler {
             };
 
         // Final response
+        debug!("Final response: {:?}", resp);
+        info!("{req_id}: completed");
         Ok(resp)
     }
 }

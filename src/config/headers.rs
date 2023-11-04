@@ -5,6 +5,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 use shellexpand::env_with_context_no_errors;
+use tracing::debug;
 
 use crate::context::Context;
 
@@ -135,20 +136,38 @@ impl HeadersTransformator for HeadersTransformsList {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
                         headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                        debug!("add: name={key}, value={value}");
                     }
                 }
                 HeaderTransformActon::Update(key) => {
                     if headers.contains_key(key) {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
-                        headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                        let old =
+                            headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                        if let Some(old) = old {
+                            debug!(
+                                "update: name={}, old={}, new={}",
+                                key,
+                                old.to_str().unwrap(),
+                                value
+                            );
+                        } else {
+                            debug!("update: name={}, old=, new={}", key, value);
+                        }
                     }
                 }
                 HeaderTransformActon::Drop(key) => {
                     if key == "*" {
+                        debug!("drop: all headers");
                         headers.clear();
                     } else {
-                        headers.remove(key);
+                        let old = headers.remove(key);
+                        if let Some(old) = old {
+                            debug!("drop: name={}, old={}", key, old.to_str().unwrap());
+                        } else {
+                            debug!("drop: name={}, old=", key);
+                        }
                     }
                 }
             };

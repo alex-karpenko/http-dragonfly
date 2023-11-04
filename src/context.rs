@@ -4,6 +4,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
+use tracing::{debug, info};
 
 use crate::config::target::TargetConfig;
 
@@ -24,11 +25,16 @@ impl<'a> Context<'a> {
 
         let ctx = ROOT_CONTEXT.get_or_init(|| {
             let mut ctx = ContextMap::new();
+            let root_env = root_env.get_environment();
+            let root_env_size = root_env.len();
 
             ctx.insert("CTX_APP_NAME".into(), CTX_APP_NAME.into());
             ctx.insert("CTX_APP_VERSION".into(), CTX_APP_VERSION.into());
-            ctx.extend(root_env.get_environment());
 
+            debug!("Accepted environment variables: {:?}", root_env);
+            ctx.extend(root_env);
+
+            info!("Created root context, CTX_APP_NAME: {CTX_APP_NAME}, CTX_APP_VERSION: {CTX_APP_VERSION}, and {root_env_size} environment variables.");
             Context {
                 own: ctx,
                 parent: None,
@@ -47,10 +53,11 @@ impl<'a> Context<'a> {
 
     pub fn get(&self, var: &String) -> Option<&String> {
         // Try own context
+        debug!("get: {var}");
         if let Some(value) = self.own.get(var) {
             Some(value)
             // or get parent if it's
-        } else if let Some(parent) = &self.parent {
+        } else if let Some(parent) = self.parent {
             // and try parent
             if let Some(value) = parent.get(var) {
                 Some(value)
@@ -181,6 +188,7 @@ impl<'a> RootEnvironment for RootOsEnvironment<'a> {
 
 impl<'a> RootOsEnvironment<'a> {
     pub fn new(env_mask_regex: &'a str) -> Self {
+        debug!("New root environment with mask: {env_mask_regex}");
         Self { env_mask_regex }
     }
 }

@@ -34,14 +34,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for cfg in listeners {
         let server = Server::bind(&cfg.socket());
         let server = server.http1_header_read_timeout(cfg.timeout());
-        let name = cfg.name();
 
+        let name = cfg.name();
         let ctx = root_ctx.clone();
         let cfg = cfg.clone();
-        let listener = RequestHandler::new(*cfg, *ctx);
+        let handler = RequestHandler::new(*cfg, *ctx);
+
         let make_service = make_service_fn(move |conn: &AddrStream| {
             let addr = conn.remote_addr();
-            let service = service_fn(move |req| listener.handle(addr, req));
+            let service = service_fn(move |req| handler.handle(addr, req));
 
             async move { Ok::<_, Infallible>(service) }
         });
@@ -73,5 +74,6 @@ async fn shutdown_signal(listener_name: String) {
         _ = quit.recv() => "QUIT",
         _ = hangup.recv() => "HANGUP",
     };
+
     info!("{listener_name}: {sig} signal has been received, shutting down");
 }
