@@ -8,7 +8,7 @@ use hyper_tls::HttpsConnector;
 
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -46,16 +46,17 @@ impl RequestHandler {
     ) -> Result<Response<Body>, Error> {
         let req_id = Uuid::new_v4();
         info!(
-            "{req_id}: accepted from: {}, to: {}",
+            "{req_id}: accepted from: {}, to: {}, method: {}",
             addr,
-            self.listener_cfg.name()
+            self.listener_cfg.name(),
+            req.method()
         );
 
         let response_cfg = self.listener_cfg.response();
 
         // Verify is method allowed in the config
         if !self.listener_cfg.is_method_allowed(req.method().as_ref()) {
-            warn!(
+            error!(
                 "{req_id}: rejected, not allowed method: {}, listener: {}",
                 req.method(),
                 self.listener_cfg.name()
@@ -120,7 +121,7 @@ impl RequestHandler {
                                     targets.push(target);
                                 } else {
                                     // Error - more than one target has true condition
-                                    warn!("{req_id}: not routed: more than one targets satisfy condition, listener: {}, targets: `{}` and `{}`", self.listener_cfg.name(), targets[0].id(), target.id());
+                                    error!("{req_id}: not routed: more than one targets satisfy condition, listener: {}, targets: `{}` and `{}`", self.listener_cfg.name(), targets[0].id(), target.id());
                                     return response_cfg.no_target_response(&ctx);
                                 }
                             }
@@ -284,7 +285,7 @@ impl RequestHandler {
 
         // Final response
         debug!("Final response: {:?}", resp);
-        info!("{req_id}: completed");
+        info!("{req_id}: completed, status={}", resp.status().as_u16());
         Ok(resp)
     }
 }
