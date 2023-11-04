@@ -19,4 +19,3 @@ impl std::fmt::Debug for HttpDragonflyError {
         write!(f, "{}", self)
     }
 }
-
