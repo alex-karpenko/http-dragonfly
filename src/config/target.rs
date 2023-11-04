@@ -39,20 +39,20 @@ impl TargetConfig {
         Duration::from_secs(DEFAULT_TARGET_TIMEOUT_SEC)
     }
 
+    fn uri(&self) -> Result<Uri, HttpDragonflyError> {
+        self.url
+            .parse()
+            .map_err(|e| HttpDragonflyError::InvalidConfig {
+                cause: format!("invalid url `{}`: {e}", self.url),
+            })
+    }
+
     pub fn id(&self) -> String {
         if let Some(id) = &self.id {
             id.clone()
         } else {
             format!("TARGET-{}", self.url)
         }
-    }
-
-    pub fn uri(&self) -> Result<Uri, HttpDragonflyError> {
-        self.url
-            .parse()
-            .map_err(|e| HttpDragonflyError::InvalidConfig {
-                cause: format!("invalid url `{}`: {e}", self.url),
-            })
     }
 
     pub fn host(&self) -> String {
@@ -162,7 +162,7 @@ impl From<&str> for ConditionFilter {
     }
 }
 impl ConditionFilter {
-    pub fn run(&self, input: serde_json::value::Value) -> bool {
+    fn run(&self, input: serde_json::value::Value) -> bool {
         let inputs = RcIter::new(core::iter::empty());
         let out = self.filter.run((Ctx::new([], &inputs), Val::from(input)));
 
@@ -173,7 +173,7 @@ impl ConditionFilter {
         out.len() == 1 && out[0] == "true"
     }
 
-    pub fn from_str(value: &str) -> Result<Self, HttpDragonflyError> {
+    fn from_str(value: &str) -> Result<Self, HttpDragonflyError> {
         let mut defs = ParseCtx::new(Vec::new());
         let (f, errs) = jaq_parse::parse(value, jaq_parse::main());
         if !errs.is_empty() {
@@ -247,10 +247,14 @@ impl ConfigValidator for [TargetConfig] {
 }
 
 pub trait TargetBehavior {
+    type TargetItem: Sized;
+
     fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool;
 }
 
 impl TargetBehavior for TargetConfig {
+    type TargetItem = TargetConfig;
+
     fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool {
         // Input content
         // .body
