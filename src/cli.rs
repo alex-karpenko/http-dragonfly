@@ -62,7 +62,10 @@ impl CliConfig {
     }
 
     fn parse_env_mask(mask: &str) -> Result<String, String> {
-        if Regex::new(mask).is_err() {
+        let mask = mask.trim();
+        if mask.is_empty() || mask == "*" {
+            Ok(".+".into())
+        } else if Regex::new(mask).is_err() {
             Err("invalid environment filter regex".into())
         } else {
             Ok(mask.into())
@@ -75,5 +78,56 @@ impl CliConfig {
 
     pub fn env_mask(&self) -> &str {
         self.env_mask.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_correct_env_mask() {
+        assert_eq!(
+            CliConfig::parse_env_mask(DEFAULT_ENV_REGEX),
+            Ok(String::from(DEFAULT_ENV_REGEX))
+        );
+        assert_eq!(CliConfig::parse_env_mask(".*"), Ok(String::from(".*")));
+        assert_eq!(CliConfig::parse_env_mask(" .* "), Ok(String::from(".*")));
+        assert_eq!(
+            CliConfig::parse_env_mask("^something_[0-9]{1,32}-.+$"),
+            Ok(String::from("^something_[0-9]{1,32}-.+$"))
+        );
+    }
+
+    #[test]
+    fn parse_empty_env_mask() {
+        assert_eq!(CliConfig::parse_env_mask(""), Ok(String::from(".+")));
+        assert_eq!(CliConfig::parse_env_mask("   "), Ok(String::from(".+")));
+    }
+
+    #[test]
+    fn parse_asterisk_env_mask() {
+        assert_eq!(CliConfig::parse_env_mask("*"), Ok(String::from(".+")));
+        assert_eq!(CliConfig::parse_env_mask(" * "), Ok(String::from(".+")));
+    }
+
+    #[test]
+    fn parse_incorrect_env_mask() {
+        assert_eq!(
+            CliConfig::parse_env_mask("\\1"),
+            Err(String::from("invalid environment filter regex"))
+        );
+        assert_eq!(
+            CliConfig::parse_env_mask("  \\1   "),
+            Err(String::from("invalid environment filter regex"))
+        );
+        assert_eq!(
+            CliConfig::parse_env_mask("[1"),
+            Err(String::from("invalid environment filter regex"))
+        );
+        assert_eq!(
+            CliConfig::parse_env_mask("**"),
+            Err(String::from("invalid environment filter regex"))
+        );
     }
 }

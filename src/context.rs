@@ -192,3 +192,109 @@ impl<'a> RootOsEnvironment<'a> {
         Self { env_mask_regex }
     }
 }
+
+#[cfg(test)]
+mod test_context {
+    use super::*;
+
+    #[derive(Debug)]
+    pub(crate) struct TestEnvironment {
+        map: ContextMap,
+    }
+
+    impl TestEnvironment {
+        pub fn single_env() -> Self {
+            let mut map = ContextMap::new();
+            map.insert("TEST_ENV_KEY".into(), "TEST_ENV_VALUE".into());
+
+            Self { map }
+        }
+    }
+
+    impl<'a> RootEnvironment for TestEnvironment {
+        fn get_environment(&self) -> ContextMap {
+            self.map.clone()
+        }
+    }
+
+    fn get_test_ctx<'a>() -> &'static Context<'a> {
+        let env_single: TestEnvironment = TestEnvironment::single_env();
+        let ctx = Context::root(env_single);
+        ctx
+    }
+
+    #[test]
+    fn context_with_single_environment() {
+        let ctx = get_test_ctx();
+
+        assert_eq!(ctx.iter().count(), 3);
+        assert_eq!(
+            ctx.get(&String::from("CTX_APP_NAME")),
+            Some(&String::from(CTX_APP_NAME))
+        );
+        assert_eq!(
+            ctx.get(&String::from("CTX_APP_VERSION")),
+            Some(&String::from(CTX_APP_VERSION))
+        );
+        assert_eq!(
+            ctx.get(&String::from("TEST_ENV_KEY")),
+            Some(&String::from("TEST_ENV_VALUE"))
+        );
+    }
+
+    #[test]
+    fn context_with() {
+        let parent = get_test_ctx();
+        let mut own = ContextMap::new();
+
+        own.insert("TEST_ENV_KEY_2".into(), "TEST_ENV_VALUE_2".into());
+        let ctx = parent.with(own);
+
+        assert_eq!(ctx.iter().count(), 4);
+        assert_eq!(
+            ctx.get(&String::from("TEST_ENV_KEY_2")),
+            Some(&String::from("TEST_ENV_VALUE_2"))
+        );
+        assert_eq!(parent.get(&String::from("TEST_ENV_KEY_2")), None);
+    }
+}
+
+#[cfg(test)]
+mod test_os_environment {
+    use super::*;
+
+    #[test]
+    fn full_environment() {
+        let env = RootOsEnvironment::new(".+").get_environment();
+        assert_eq!(env.len(), env::vars().count());
+        assert_eq!(
+            env.get("PATH").unwrap().to_owned(),
+            env::vars().find(|v| v.0 == "PATH").unwrap().1
+        );
+    }
+
+    #[test]
+    fn single_entry_environment() {
+        let env = RootOsEnvironment::new("^PATH$").get_environment();
+        assert_eq!(env.len(), 1);
+        assert_eq!(
+            env.get("PATH").unwrap().to_owned(),
+            env::vars().find(|v| v.0 == "PATH").unwrap().1
+        );
+    }
+
+    #[test]
+    fn empty_environment() {
+        let env =
+            RootOsEnvironment::new("^UNREAL_ENVIRONMENT_VARIABLE_MASK_[0-9]{3}$").get_environment();
+        assert_eq!(env.len(), 0);
+
+        env::set_var(
+            "UNREAL_ENVIRONMENT_VARIABLE_MASK_123",
+            "UNREAL_ENVIRONMENT_VARIABLE_MASK_VALUE",
+        );
+        let env =
+            RootOsEnvironment::new("^UNREAL_ENVIRONMENT_VARIABLE_MASK_[0-9]{3}$").get_environment();
+        assert_eq!(env.len(), 1);
+    }
+}

@@ -11,23 +11,23 @@ use crate::context::Context;
 
 pub type HeadersTransformsList = Vec<HeaderTransform>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HeaderTransform {
     action: HeaderTransformActon,
     value: Option<String>,
 }
 
 impl HeaderTransform {
-    pub fn action(&self) -> &HeaderTransformActon {
+    fn action(&self) -> &HeaderTransformActon {
         &self.action
     }
 
-    pub fn value(&self) -> Option<&String> {
+    fn value(&self) -> Option<&String> {
         self.value.as_ref()
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
 pub enum HeaderTransformActon {
     Add(String),
@@ -171,6 +171,64 @@ impl HeadersTransformator for HeadersTransformsList {
                     }
                 }
             };
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserialize_ok_header_transform() {
+        let out: HeaderTransform =
+            serde_json::from_str(r#"{"add": "new_header", "value": "new_value"}"#).unwrap();
+        let expected = HeaderTransform {
+            action: HeaderTransformActon::Add("new_header".into()),
+            value: Some("new_value".into()),
+        };
+        assert_eq!(out, expected, "wrong deserialization of `add` action");
+
+        let out: HeaderTransform =
+            serde_json::from_str(r#"{"update": "new_header", "value": "new_value"}"#).unwrap();
+        let expected = HeaderTransform {
+            action: HeaderTransformActon::Update("new_header".into()),
+            value: Some("new_value".into()),
+        };
+        assert_eq!(out, expected, "wrong deserialization of `update` action");
+
+        let out: HeaderTransform = serde_json::from_str(r#"{"drop": "old_header"}"#).unwrap();
+        let expected = HeaderTransform {
+            action: HeaderTransformActon::Drop("old_header".into()),
+            value: None,
+        };
+        assert_eq!(out, expected, "wrong deserialization of `drop` action");
+    }
+
+    #[test]
+    fn deserialize_wrong_header_transform() {
+        let wrong_json = [
+            r#"{"wrong_action": "new_header", "value": "new_value"}"#,
+            r#"{"wrong_action": "new_header"}"#,
+            r#"{"add": "new_header", "wrong_value": "new_value"}"#,
+            r#"{"add": "new_header", "value": 1}"#,
+            r#"{"add": "new_header"}"#,
+            r#"{"update": "new_header", "wrong_value": "new_value"}"#,
+            r#"{"update": "new_header", "value": 1}"#,
+            r#"{"update": "new_header"}"#,
+            r#"{"drop": "old_header", "wrong_value": "old_value"}"#,
+            r#"{"drop": "old_header", "value": "old_value"}"#,
+            r#"{"drop": "old_header", "value": 1}"#,
+        ];
+
+        for test_item in wrong_json {
+            let result: Result<HeaderTransform, serde_json::Error> =
+                serde_json::from_str(test_item);
+            assert!(
+                result.is_err(),
+                "unexpected deserialization of `{}`",
+                test_item
+            );
         }
     }
 }

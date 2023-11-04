@@ -252,14 +252,10 @@ impl ConfigValidator for [TargetConfig] {
 }
 
 pub trait TargetBehavior {
-    type TargetItem: Sized;
-
     fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool;
 }
 
 impl TargetBehavior for TargetConfig {
-    type TargetItem = TargetConfig;
-
     fn check_condition(&self, ctx: &Context, req: &Parts, body: &Bytes) -> bool {
         // Input content
         // .body

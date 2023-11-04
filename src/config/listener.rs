@@ -120,7 +120,7 @@ enum HttpMethod {
     Head,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ListenOn {
     ip: Ipv4Addr,
     port: u16,
@@ -142,6 +142,16 @@ impl Default for ListenOn {
 }
 
 impl ListenOn {
+    fn new(ip: Ipv4Addr, port: u16) -> Result<Self, String> {
+        if port > 0 {
+            Ok(Self { ip, port })
+        } else {
+            Err(format!(
+                "port `{port}` is invalid, should be between 1 and 65535"
+            ))
+        }
+    }
+
     fn parse_ip_address(ip: &str) -> Result<Ipv4Addr, String> {
         Ipv4Addr::from_str(ip).map_err(|_| String::from(INVALID_IP_ADDRESS_ERROR))
     }
@@ -155,7 +165,7 @@ impl ListenOn {
                 .map_err(|e| format!("invalid port value `{}`: {e}", splitted[0]))?;
             let ip = Ipv4Addr::new(0, 0, 0, 0);
 
-            Ok(ListenOn { ip, port })
+            ListenOn::new(ip, port)
         } else if splitted.len() == 2 {
             let port: u16 = splitted[1]
                 .parse()
@@ -167,7 +177,7 @@ impl ListenOn {
                 Self::parse_ip_address(splitted[0])?
             };
 
-            Ok(ListenOn { ip, port })
+            ListenOn::new(ip, port)
         } else {
             Err("invalid `listen on` token, should be in form IP:PORT".into())
         }
@@ -215,5 +225,77 @@ impl ConfigValidator for ListenerConfig {
             .validate(self.targets(), self.response().target_selector())?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const IP_0000: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);
+    const IP_1234: Ipv4Addr = Ipv4Addr::new(1, 2, 3, 4);
+
+    #[test]
+    fn listen_on() {
+        assert_eq!(
+            ListenOn::default(),
+            ListenOn {
+                ip: IP_0000,
+                port: DEFAULT_LISTENER_PORT
+            }
+        );
+
+        assert_eq!(
+            ListenOn::from_str("1.2.3.4:8888").unwrap(),
+            ListenOn {
+                ip: IP_1234,
+                port: 8888
+            }
+        );
+        assert_eq!(
+            ListenOn::from_str("0.0.0.0:8888").unwrap(),
+            ListenOn {
+                ip: IP_0000,
+                port: 8888
+            }
+        );
+        assert_eq!(
+            ListenOn::from_str(":8888").unwrap(),
+            ListenOn {
+                ip: IP_0000,
+                port: 8888
+            }
+        );
+        assert_eq!(
+            ListenOn::from_str("*:8888").unwrap(),
+            ListenOn {
+                ip: IP_0000,
+                port: 8888
+            }
+        );
+    }
+
+    #[test]
+    fn wrong_listen_on() {
+        let wrong_str = [
+            "",
+            ":",
+            "1.2.3.4",
+            "1.2.3.4:",
+            "111.222.333.444:8080",
+            "*:0",
+            "*:65536",
+            "*:123456",
+            "*:str",
+            "google.com:8080",
+        ];
+
+        for wrong_item in wrong_str {
+            assert!(
+                ListenOn::from_str(wrong_item).is_err(),
+                "unexpectedly deserialized `{}`",
+                wrong_item
+            );
+        }
     }
 }
