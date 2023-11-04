@@ -32,7 +32,7 @@ impl ResponseStrategy {
             ResponseStrategy::ConditionalRouting => {
                 // Make sure that all targets have condition defined if strategy is conditional_routing
                 if targets.iter().any(|t| t.condition().is_none()) {
-                    return Err(HttpDragonflyError::InvalidConfig {
+                    return Err(HttpDragonflyError::ValidateConfig {
                         cause: format!(
                             "all targets must have condition defined because strategy is `{}`",
                             self
@@ -50,7 +50,7 @@ impl ResponseStrategy {
                     })
                     .count();
                 if default_count > 1 {
-                    return Err(HttpDragonflyError::InvalidConfig {
+                    return Err(HttpDragonflyError::ValidateConfig {
                         cause: "more than one default target is defined but only one is allowed"
                             .into(),
                     });
@@ -63,7 +63,7 @@ impl ResponseStrategy {
                 let target_ids: Vec<String> = targets.iter().map(TargetConfig::id).collect();
                 if let Some(target_id) = target_selector {
                     if !target_ids.contains(target_id) {
-                        return Err(HttpDragonflyError::InvalidConfig {
+                        return Err(HttpDragonflyError::ValidateConfig {
                             cause: format!(
                                 "`target_selector` points to unknown target_id `{}`",
                                 target_id
@@ -71,7 +71,7 @@ impl ResponseStrategy {
                         });
                     }
                 } else {
-                    return Err(HttpDragonflyError::InvalidConfig {
+                    return Err(HttpDragonflyError::ValidateConfig {
                         cause: format!(
                             "`target_selector` should be specified for strategy `{}`",
                             self

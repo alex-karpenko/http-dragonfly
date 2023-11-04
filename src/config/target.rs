@@ -42,7 +42,7 @@ impl TargetConfig {
     fn uri(&self) -> Result<Uri, HttpDragonflyError> {
         self.url
             .parse()
-            .map_err(|e| HttpDragonflyError::InvalidConfig {
+            .map_err(|e| HttpDragonflyError::ValidateConfig {
                 cause: format!("invalid url `{}`: {e}", self.url),
             })
     }
@@ -184,7 +184,7 @@ impl ConditionFilter {
         if !errs.is_empty() {
             errs.iter()
                 .for_each(|e| error!("unable to parse conditional expression: {e}"));
-            return Err(HttpDragonflyError::InvalidConfig {
+            return Err(HttpDragonflyError::ValidateConfig {
                 cause: errs[0].to_string(),
             });
         }
@@ -192,7 +192,7 @@ impl ConditionFilter {
             let filter = defs.compile(f);
             Ok(ConditionFilter { filter })
         } else {
-            Err(HttpDragonflyError::InvalidConfig {
+            Err(HttpDragonflyError::ValidateConfig {
                 cause: "invalid conditional expression".into(),
             })
         }
@@ -208,7 +208,7 @@ impl ConfigValidator for TargetConfig {
         match self.on_error() {
             TargetOnErrorAction::Propagate | TargetOnErrorAction::Drop => {
                 if self.error_status().is_some() {
-                    return Err(HttpDragonflyError::InvalidConfig {
+                    return Err(HttpDragonflyError::ValidateConfig {
                         cause: format!(
                             "`error_status` can be set if `on_error` is `status` only, target `{}`",
                             self.id()
@@ -218,7 +218,7 @@ impl ConfigValidator for TargetConfig {
             }
             TargetOnErrorAction::Status => {
                 if self.error_status().is_none() {
-                    return Err(HttpDragonflyError::InvalidConfig {
+                    return Err(HttpDragonflyError::ValidateConfig {
                         cause: format!(
                             "`error_status` should be set if `on_error` is `status`, target `{}`",
                             self.id()
@@ -242,7 +242,7 @@ impl ConfigValidator for [TargetConfig] {
         // Make sure all targets have unique ID
         let unique_targets_count = self.iter().map(TargetConfig::id).count();
         if unique_targets_count != self.len() {
-            return Err(HttpDragonflyError::InvalidConfig {
+            return Err(HttpDragonflyError::ValidateConfig {
                 cause: "all target IDs of the listener should be unique".into(),
             });
         }

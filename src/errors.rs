@@ -11,7 +11,7 @@ pub enum HttpDragonflyError {
         cause: figment::Error,
     },
     #[error("invalid config: {}", .cause)]
-    InvalidConfig { cause: String },
+    ValidateConfig { cause: String },
 }
 
 impl std::fmt::Debug for HttpDragonflyError {
@@ -19,3 +19,4 @@ impl std::fmt::Debug for HttpDragonflyError {
         write!(f, "{}", self)
     }
 }
+
