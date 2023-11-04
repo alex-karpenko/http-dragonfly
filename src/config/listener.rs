@@ -3,11 +3,14 @@ use serde::{
     Deserialize, Deserializer,
 };
 use std::{
+    collections::HashSet,
     fmt::Display,
     net::{Ipv4Addr, SocketAddr},
     str::FromStr,
     time::Duration,
 };
+use strum_macros::EnumString;
+use tracing::debug;
 
 use super::{
     headers::HeaderTransform,
@@ -35,7 +38,7 @@ pub struct ListenerConfig {
     #[serde(default)]
     strategy: ResponseStrategy,
     headers: Option<Vec<HeaderTransform>>,
-    methods: Option<Vec<String>>,
+    methods: Option<HashSet<HttpMethod>>,
     targets: TargetConfigList,
     #[serde(default)]
     response: ResponseConfig,
@@ -62,9 +65,15 @@ impl ListenerConfig {
 
     /// Verifies if HTTP method is allowed to be used call for this [`ListenerConfig`]
     pub fn is_method_allowed(&self, method: &str) -> bool {
+        debug!("allowed: {:?}", self.methods);
         if let Some(methods) = &self.methods {
-            let method = method.to_lowercase();
-            methods.contains(&method)
+            debug!("check for: {:?}", method);
+            let method = HttpMethod::from_str(method);
+            if let Ok(method) = method {
+                methods.contains(&method)
+            } else {
+                false
+            }
         } else {
             true
         }
@@ -98,8 +107,9 @@ impl ListenerConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(deny_unknown_fields, rename_all = "lowercase")]
+#[derive(Deserialize, Debug, EnumString, PartialEq, Eq, Hash)]
+#[serde(deny_unknown_fields, rename_all = "UPPERCASE")]
+#[strum(ascii_case_insensitive)]
 enum HttpMethod {
     Get,
     Post,
