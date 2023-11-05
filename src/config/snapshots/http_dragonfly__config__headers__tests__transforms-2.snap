@@ -1,0 +1,60 @@
+---
+source: src/config/headers.rs
+expression: transforms
+---
+[
+    HeaderTransform {
+        action: Add(
+            "X-Some-New-Header",
+        ),
+        value: Some(
+            "good",
+        ),
+    },
+    HeaderTransform {
+        action: Update(
+            "X-Existing-Header",
+        ),
+        value: Some(
+            "good",
+        ),
+    },
+    HeaderTransform {
+        action: Drop(
+            "X-Header-To-Drop",
+        ),
+        value: None,
+    },
+    HeaderTransform {
+        action: Add(
+            "X-Existing-Header",
+        ),
+        value: Some(
+            "wrong",
+        ),
+    },
+    HeaderTransform {
+        action: Update(
+            "X-Non-Exiting-Header",
+        ),
+        value: Some(
+            "wrong",
+        ),
+    },
+    HeaderTransform {
+        action: Add(
+            "X-Env-Header",
+        ),
+        value: Some(
+            "${TEST_ENV_HEADER_TO_ADD}",
+        ),
+    },
+    HeaderTransform {
+        action: Update(
+            "X-Env-Header-2",
+        ),
+        value: Some(
+            "${TEST_ENV_HEADER_TO_ADD}",
+        ),
+    },
+]

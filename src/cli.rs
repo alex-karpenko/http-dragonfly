@@ -83,51 +83,35 @@ impl CliConfig {
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_ron_snapshot;
+
     use super::*;
 
     #[test]
     fn parse_correct_env_mask() {
-        assert_eq!(
-            CliConfig::parse_env_mask(DEFAULT_ENV_REGEX),
-            Ok(String::from(DEFAULT_ENV_REGEX))
-        );
-        assert_eq!(CliConfig::parse_env_mask(".*"), Ok(String::from(".*")));
-        assert_eq!(CliConfig::parse_env_mask(" .* "), Ok(String::from(".*")));
-        assert_eq!(
-            CliConfig::parse_env_mask("^something_[0-9]{1,32}-.+$"),
-            Ok(String::from("^something_[0-9]{1,32}-.+$"))
-        );
+        assert_ron_snapshot!(CliConfig::parse_env_mask(DEFAULT_ENV_REGEX));
+        assert_ron_snapshot!(CliConfig::parse_env_mask(".*"));
+        assert_ron_snapshot!(CliConfig::parse_env_mask(" .* "));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("^something_[0-9]{1,32}-.+$"));
     }
 
     #[test]
     fn parse_empty_env_mask() {
-        assert_eq!(CliConfig::parse_env_mask(""), Ok(String::from(".+")));
-        assert_eq!(CliConfig::parse_env_mask("   "), Ok(String::from(".+")));
+        assert_ron_snapshot!(CliConfig::parse_env_mask(""));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("   "));
     }
 
     #[test]
     fn parse_asterisk_env_mask() {
-        assert_eq!(CliConfig::parse_env_mask("*"), Ok(String::from(".+")));
-        assert_eq!(CliConfig::parse_env_mask(" * "), Ok(String::from(".+")));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("*"));
+        assert_ron_snapshot!(CliConfig::parse_env_mask(" * "));
     }
 
     #[test]
     fn parse_incorrect_env_mask() {
-        assert_eq!(
-            CliConfig::parse_env_mask("\\1"),
-            Err(String::from("invalid environment filter regex"))
-        );
-        assert_eq!(
-            CliConfig::parse_env_mask("  \\1   "),
-            Err(String::from("invalid environment filter regex"))
-        );
-        assert_eq!(
-            CliConfig::parse_env_mask("[1"),
-            Err(String::from("invalid environment filter regex"))
-        );
-        assert_eq!(
-            CliConfig::parse_env_mask("**"),
-            Err(String::from("invalid environment filter regex"))
-        );
+        assert_ron_snapshot!(CliConfig::parse_env_mask("\\1"));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("  \\1   "));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("[1"));
+        assert_ron_snapshot!(CliConfig::parse_env_mask("**"));
     }
 }

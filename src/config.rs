@@ -62,3 +62,39 @@ impl ConfigValidator for AppConfig {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::context::test_context;
+    use insta::{assert_debug_snapshot, glob};
+
+    use super::*;
+
+    const TEST_CONFIGS_FOLDER: &str = "../tests/configs";
+
+    #[test]
+    fn good_config() {
+        let ctx = test_context::get_test_ctx();
+        glob!(
+            TEST_CONFIGS_FOLDER,
+            "good/*.yaml",
+            |path| assert_debug_snapshot!(AppConfig::new(
+                &String::from(path.to_str().unwrap()),
+                &ctx
+            ))
+        );
+    }
+
+    #[test]
+    fn wrong_config() {
+        let ctx = test_context::get_test_ctx();
+        glob!(
+            TEST_CONFIGS_FOLDER,
+            "wrong/*.yaml",
+            |path| assert_debug_snapshot!(AppConfig::new(
+                &String::from(path.to_str().unwrap()),
+                &ctx
+            ))
+        );
+    }
+}

@@ -1,6 +1,6 @@
 use serde::{
     de::{self, Visitor},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize,
 };
 use std::{
     collections::HashSet,
@@ -107,7 +107,7 @@ impl ListenerConfig {
     }
 }
 
-#[derive(Deserialize, Debug, EnumString, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Debug, EnumString, PartialEq, Eq, Hash, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "UPPERCASE")]
 #[strum(ascii_case_insensitive)]
 enum HttpMethod {
@@ -120,7 +120,7 @@ enum HttpMethod {
     Head,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 struct ListenOn {
     ip: Ipv4Addr,
     port: u16,
@@ -230,49 +230,17 @@ impl ConfigValidator for ListenerConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use insta::{assert_debug_snapshot, assert_ron_snapshot};
 
-    const IP_0000: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);
-    const IP_1234: Ipv4Addr = Ipv4Addr::new(1, 2, 3, 4);
+    use super::*;
 
     #[test]
     fn listen_on() {
-        assert_eq!(
-            ListenOn::default(),
-            ListenOn {
-                ip: IP_0000,
-                port: DEFAULT_LISTENER_PORT
-            }
-        );
-
-        assert_eq!(
-            ListenOn::from_str("1.2.3.4:8888").unwrap(),
-            ListenOn {
-                ip: IP_1234,
-                port: 8888
-            }
-        );
-        assert_eq!(
-            ListenOn::from_str("0.0.0.0:8888").unwrap(),
-            ListenOn {
-                ip: IP_0000,
-                port: 8888
-            }
-        );
-        assert_eq!(
-            ListenOn::from_str(":8888").unwrap(),
-            ListenOn {
-                ip: IP_0000,
-                port: 8888
-            }
-        );
-        assert_eq!(
-            ListenOn::from_str("*:8888").unwrap(),
-            ListenOn {
-                ip: IP_0000,
-                port: 8888
-            }
-        );
+        assert_ron_snapshot!(ListenOn::default());
+        assert_ron_snapshot!(ListenOn::from_str("1.2.3.4:8888").unwrap());
+        assert_ron_snapshot!(ListenOn::from_str("0.0.0.0:8888").unwrap());
+        assert_ron_snapshot!(ListenOn::from_str(":8888").unwrap());
+        assert_ron_snapshot!(ListenOn::from_str("*:8888").unwrap());
     }
 
     #[test]
@@ -297,5 +265,43 @@ mod tests {
                 wrong_item
             );
         }
+    }
+
+    #[test]
+    fn http_method() {
+        let all_methods: HashSet<HttpMethod> = serde_json::from_str(
+            r#"
+        [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS",
+            "HEAD"
+        ]
+        "#,
+        )
+        .unwrap();
+        assert_ron_snapshot!(all_methods, {"." => insta::sorted_redaction()});
+    }
+
+    #[test]
+    fn wrong_http_method() {
+        let wrong_method: Result<HashSet<HttpMethod>, serde_json::Error> = serde_json::from_str(
+            r#"
+        [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS",
+            "HEAD",
+            "UPDATE"
+        ]
+        "#,
+        );
+        assert_debug_snapshot!(wrong_method);
     }
 }

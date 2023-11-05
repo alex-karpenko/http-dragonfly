@@ -1,0 +1,10 @@
+---
+source: src/config/headers.rs
+expression: headers
+---
+{
+    "x-header-to-drop": "wrong",
+    "x-existing-header": "wrong",
+    "x-header-without-changes": "good",
+    "x-env-header-2": "wrong",
+}

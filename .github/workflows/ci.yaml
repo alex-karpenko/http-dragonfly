@@ -25,6 +25,8 @@ jobs:
         run: cargo build
 
       - name: Test
+        env:
+          CI: true
         run: cargo test
 
       - name: Fmt

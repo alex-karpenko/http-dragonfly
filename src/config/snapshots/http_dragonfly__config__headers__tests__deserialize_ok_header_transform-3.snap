@@ -1,0 +1,8 @@
+---
+source: src/config/headers.rs
+expression: drop_action
+---
+HeaderTransform(
+  action: drop("old_header"),
+  value: None,
+)

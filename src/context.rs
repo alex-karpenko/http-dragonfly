@@ -1,6 +1,7 @@
 use hyper::{http::request::Parts, Body, Response};
 use once_cell::sync::OnceCell;
 use regex::Regex;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
@@ -13,7 +14,7 @@ const CTX_APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub type ContextMap = HashMap<String, String>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Context<'a> {
     own: ContextMap,
     parent: Option<&'a Context<'a>>,
@@ -194,18 +195,31 @@ impl<'a> RootOsEnvironment<'a> {
 }
 
 #[cfg(test)]
-mod test_context {
+pub mod test_context {
+    use hyper::Request;
+    use insta::assert_ron_snapshot;
+    use std::net::Ipv4Addr;
+
+    use crate::config::target::test_target::get_test_target;
+
     use super::*;
 
+    const TEST_ENV_KEY: &str = "TEST_ENV_KEY";
+    const TEST_ENV_VALUE: &str = "TEST_ENV_VALUE";
+
+    const TEST_ENV_HEADER_NAME: &str = "TEST_ENV_HEADER_TO_ADD";
+    const TEST_ENV_HEADER_VALUE: &str = "TEST_ENV_HEADER_VALUE";
+
     #[derive(Debug)]
-    pub(crate) struct TestEnvironment {
+    pub struct TestEnvironment {
         map: ContextMap,
     }
 
     impl TestEnvironment {
-        pub fn single_env() -> Self {
+        pub fn test_env() -> Self {
             let mut map = ContextMap::new();
-            map.insert("TEST_ENV_KEY".into(), "TEST_ENV_VALUE".into());
+            map.insert(TEST_ENV_KEY.into(), TEST_ENV_VALUE.into());
+            map.insert(TEST_ENV_HEADER_NAME.into(), TEST_ENV_HEADER_VALUE.into());
 
             Self { map }
         }
@@ -217,17 +231,40 @@ mod test_context {
         }
     }
 
-    fn get_test_ctx<'a>() -> &'static Context<'a> {
-        let env_single: TestEnvironment = TestEnvironment::single_env();
+    pub fn get_test_ctx<'a>() -> &'static Context<'a> {
+        let env_single: TestEnvironment = TestEnvironment::test_env();
         let ctx = Context::root(env_single);
         ctx
     }
 
+    fn get_test_source_addr() -> SocketAddr {
+        SocketAddr::new(Ipv4Addr::new(4, 3, 2, 1).into(), 12345)
+    }
+
+    fn get_test_request() -> Request<Body> {
+        Request::builder()
+            .uri("https://www.google.com/test-path?query=some-query")
+            .header("X-Some-Header", "some header value")
+            .method("POST")
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    fn get_test_response() -> Response<Body> {
+        Response::builder()
+            .header("X-Some-Header", "some header value")
+            .body(Body::empty())
+            .unwrap()
+    }
+
+
     #[test]
-    fn context_with_single_environment() {
+    fn context_with_test_environment() {
         let ctx = get_test_ctx();
 
-        assert_eq!(ctx.iter().count(), 3);
+        assert_ron_snapshot!(get_test_ctx(), {".own" => insta::sorted_redaction()});
+
+        assert_eq!(ctx.iter().count(), 4);
         assert_eq!(
             ctx.get(&String::from("CTX_APP_NAME")),
             Some(&String::from(CTX_APP_NAME))
@@ -237,8 +274,8 @@ mod test_context {
             Some(&String::from(CTX_APP_VERSION))
         );
         assert_eq!(
-            ctx.get(&String::from("TEST_ENV_KEY")),
-            Some(&String::from("TEST_ENV_VALUE"))
+            ctx.get(&String::from(TEST_ENV_KEY)),
+            Some(&String::from(TEST_ENV_VALUE))
         );
     }
 
@@ -248,15 +285,45 @@ mod test_context {
         let mut own = ContextMap::new();
 
         own.insert("TEST_ENV_KEY_2".into(), "TEST_ENV_VALUE_2".into());
-        let ctx = parent.with(own);
+        let ctx_with = parent.with(own);
 
-        assert_eq!(ctx.iter().count(), 4);
+        assert_eq!(ctx_with.iter().count(), 5);
         assert_eq!(
-            ctx.get(&String::from("TEST_ENV_KEY_2")),
+            ctx_with.get(&String::from("TEST_ENV_KEY_2")),
             Some(&String::from("TEST_ENV_VALUE_2"))
         );
         assert_eq!(parent.get(&String::from("TEST_ENV_KEY_2")), None);
+        assert_ron_snapshot!(ctx_with, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
     }
+
+    #[test]
+    fn request_context() {
+        let parent = get_test_ctx();
+        let addr = get_test_source_addr();
+        let (req, _) = get_test_request().into_parts();
+        let request_ctx = parent.with_request(&addr, &req, "TEST-LISTENER-1.2.3.4:1234".into());
+
+        assert_ron_snapshot!(request_ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
+    }
+
+    #[test]
+    fn target_context() {
+        let parent = get_test_ctx();
+        let target = get_test_target();
+        let target_ctx = parent.with_target(&target);
+
+        assert_ron_snapshot!(target_ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
+    }
+
+    #[test]
+    fn response_context() {
+        let parent = get_test_ctx();
+        let response = get_test_response();
+        let response_ctx = parent.with_response(&response);
+
+        assert_ron_snapshot!(response_ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
+    }
+
 }
 
 #[cfg(test)]

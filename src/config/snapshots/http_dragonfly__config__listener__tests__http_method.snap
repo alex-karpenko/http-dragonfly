@@ -1,0 +1,13 @@
+---
+source: src/config/listener.rs
+expression: methods
+---
+[
+  GET,
+  POST,
+  PUT,
+  PATCH,
+  DELETE,
+  OPTIONS,
+  HEAD,
+]

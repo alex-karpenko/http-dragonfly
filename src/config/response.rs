@@ -1,6 +1,6 @@
 use hyper::{header::CONTENT_LENGTH, http::Error, Body, Error as HyperError, Response, StatusCode};
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
 
@@ -13,7 +13,7 @@ use super::{
 
 pub type ResponseStatus = u16;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct ResponseConfig {
     target_selector: Option<String>,
@@ -34,7 +34,7 @@ impl Default for ResponseConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct OverrideConfig {
     status: Option<ResponseStatus>,

@@ -293,3 +293,22 @@ impl TargetBehavior for TargetConfig {
         }
     }
 }
+
+#[cfg(test)]
+
+pub mod test_target {
+    use super::*;
+
+    pub fn get_test_target() -> TargetConfig {
+        TargetConfig {
+            id: Some("TEST-TARGET-ID".into()),
+            url: "https://www.google.com/test-path?query=some-query".into(),
+            headers: None,
+            body: None,
+            timeout: Duration::from_secs(DEFAULT_TARGET_TIMEOUT_SEC),
+            on_error: TargetOnErrorAction::Propagate,
+            error_status: None,
+            condition: Some(TargetConditionConfig::Default),
+        }
+    }
+}

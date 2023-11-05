@@ -1,0 +1,45 @@
+listeners:
+  - name: Listener-1
+    on: "8.8.8.8:4321"
+    timeout: 30s
+    methods:
+      - GET
+    strategy: always_override
+    headers:
+      - drop: "*"
+      - add: X-Added-Header
+        value: something
+      - update: Authorization
+        value: ${SOME_AUTH_TOKEN}
+      - drop: X-Forwarded-For
+    targets:
+      - id: Target-0
+        url: https://test-1.www.com/
+        timeout: 60s
+        body: '{"method": "${CTX_REQUEST_METHOD}"}'
+        on_error: status
+        error_status: 555
+      - id: Target-1
+        condition: .body.target == "1"
+        url: https://test-2.www.com/some/path
+      - id: Target-2
+        url: https://test-3.www.com/?${CTX_REQUEST_QUERY}
+        headers:
+          - update: Authorization
+            value: ${TARGET_2_AUTH_TOKEN}
+          - drop: X-Added-Header
+    response:
+      target_selector: Target-0
+      failed_status_regex: "4\\d{2}|500"
+      no_targets_status: 599
+      override:
+        status: 200
+        body: |
+          {"status": "ok"}
+        headers:
+          - update: content-type
+            value: application/json
+          - add: X-Http-Splitter-Version
+            value: ${CTX_APP_VERSION}
+          - add: X-Http-Splitter-Response-Source
+            value: ${CTX_TARGET_ID}

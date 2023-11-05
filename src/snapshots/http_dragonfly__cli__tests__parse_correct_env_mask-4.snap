@@ -1,0 +1,5 @@
+---
+source: src/cli.rs
+expression: "CliConfig::parse_env_mask(\"^something_[0-9]{1,32}-.+$\")"
+---
+Ok("^something_[0-9]{1,32}-.+$")

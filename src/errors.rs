@@ -19,3 +19,27 @@ impl std::fmt::Debug for HttpDragonflyError {
         write!(f, "{}", self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::ErrorKind;
+
+    use figment::Error;
+    use insta::assert_debug_snapshot;
+
+    use super::*;
+
+    #[test]
+    fn errors() {
+        assert_debug_snapshot!(HttpDragonflyError::LoadConfigFile {
+            filename: "test-config.yaml".into(),
+            cause: io::Error::new(ErrorKind::Other, "snapshot test cause")
+        });
+        assert_debug_snapshot!(HttpDragonflyError::ParseConfigFile {
+            cause: Error::from("snapshot test cause".to_string())
+        });
+        assert_debug_snapshot!(HttpDragonflyError::ValidateConfig {
+            cause: "snapshot test cause".to_string()
+        });
+    }
+}

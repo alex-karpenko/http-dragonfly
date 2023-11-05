@@ -1,8 +1,8 @@
-use hyper::header::HeaderValue;
+use hyper::header::{HeaderValue, HeaderName};
 use hyper::HeaderMap;
 use serde::{
     de::{self, MapAccess, Visitor},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize,
 };
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
@@ -11,7 +11,7 @@ use crate::context::Context;
 
 pub type HeadersTransformsList = Vec<HeaderTransform>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct HeaderTransform {
     action: HeaderTransformActon,
     value: Option<String>,
@@ -27,7 +27,7 @@ impl HeaderTransform {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "lowercase")]
 pub enum HeaderTransformActon {
     Add(String),
@@ -123,37 +123,40 @@ impl<'de> Deserialize<'de> for HeaderTransform {
     }
 }
 
-pub trait HeadersTransformator {
-    fn transform(&'static self, headers: &mut HeaderMap, ctx: &Context);
+pub trait HeadersTransformator<'a> {
+    fn transform(&'a self, headers: &'a mut HeaderMap, ctx: &Context);
 }
 
-impl HeadersTransformator for HeadersTransformsList {
-    fn transform(&'static self, headers: &mut HeaderMap, ctx: &Context) {
+impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
+    fn transform(&'a self, headers: &'a mut HeaderMap, ctx: &Context) {
         for transform in self {
-            match transform.action() {
+            match transform.action().clone() {
                 HeaderTransformActon::Add(key) => {
                     if !headers.contains_key(key.clone()) {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
-                        headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                        let key =  HeaderName::from_bytes(key.as_bytes()).unwrap();
                         debug!("add: name={key}, value={value}");
+                        headers.insert(&key, HeaderValue::from_str(&value).unwrap());
                     }
                 }
                 HeaderTransformActon::Update(key) => {
-                    if headers.contains_key(key) {
+                    if headers.contains_key(&key) {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
+                        let debug_key = key.clone();
+                        let key =  HeaderName::from_bytes(key.as_bytes()).unwrap();
                         let old =
-                            headers.insert(key.as_str(), HeaderValue::from_str(&value).unwrap());
+                            headers.insert(key, HeaderValue::from_str(&value).unwrap());
                         if let Some(old) = old {
                             debug!(
                                 "update: name={}, old={}, new={}",
-                                key,
+                                debug_key,
                                 old.to_str().unwrap(),
                                 value
                             );
                         } else {
-                            debug!("update: name={}, old=, new={}", key, value);
+                            debug!("update: name={}, old=, new={}", debug_key, value);
                         }
                     }
                 }
@@ -162,11 +165,12 @@ impl HeadersTransformator for HeadersTransformsList {
                         debug!("drop: all headers");
                         headers.clear();
                     } else {
+                        let debug_key = key.clone();
                         let old = headers.remove(key);
                         if let Some(old) = old {
-                            debug!("drop: name={}, old={}", key, old.to_str().unwrap());
+                            debug!("drop: name={}, old={}", debug_key, old.to_str().unwrap());
                         } else {
-                            debug!("drop: name={}, old=", key);
+                            debug!("drop: name={}, old=", debug_key);
                         }
                     }
                 }
@@ -177,32 +181,25 @@ impl HeadersTransformator for HeadersTransformsList {
 
 #[cfg(test)]
 mod tests {
+    use insta::{assert_ron_snapshot, assert_debug_snapshot};
+
+    use crate::context::test_context::get_test_ctx;
+
     use super::*;
 
     #[test]
     fn deserialize_ok_header_transform() {
-        let out: HeaderTransform =
+        let add_action: HeaderTransform =
             serde_json::from_str(r#"{"add": "new_header", "value": "new_value"}"#).unwrap();
-        let expected = HeaderTransform {
-            action: HeaderTransformActon::Add("new_header".into()),
-            value: Some("new_value".into()),
-        };
-        assert_eq!(out, expected, "wrong deserialization of `add` action");
+        assert_ron_snapshot!(add_action);
 
-        let out: HeaderTransform =
+        let update_action: HeaderTransform =
             serde_json::from_str(r#"{"update": "new_header", "value": "new_value"}"#).unwrap();
-        let expected = HeaderTransform {
-            action: HeaderTransformActon::Update("new_header".into()),
-            value: Some("new_value".into()),
-        };
-        assert_eq!(out, expected, "wrong deserialization of `update` action");
+        assert_ron_snapshot!(update_action);
 
-        let out: HeaderTransform = serde_json::from_str(r#"{"drop": "old_header"}"#).unwrap();
-        let expected = HeaderTransform {
-            action: HeaderTransformActon::Drop("old_header".into()),
-            value: None,
-        };
-        assert_eq!(out, expected, "wrong deserialization of `drop` action");
+        let drop_action: HeaderTransform =
+            serde_json::from_str(r#"{"drop": "old_header"}"#).unwrap();
+        assert_ron_snapshot!(drop_action);
     }
 
     #[test]
@@ -230,5 +227,36 @@ mod tests {
                 test_item
             );
         }
+    }
+
+    #[test]
+    fn transforms() {
+        let ctx = get_test_ctx();
+        assert_ron_snapshot!(ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
+
+        let transforms: HeadersTransformsList = serde_json::from_str(r#"
+        [
+            {"add": "X-Some-New-Header", "value": "good"},
+            {"update": "X-Existing-Header", "value": "good"},
+            {"drop": "X-Header-To-Drop"},
+            {"add": "X-Existing-Header", "value": "wrong"},
+            {"update": "X-Non-Exiting-Header", "value": "wrong"},
+            {"add": "X-Env-Header", "value": "${TEST_ENV_HEADER_TO_ADD}"},
+            {"update": "X-Env-Header-2", "value": "${TEST_ENV_HEADER_TO_ADD}"}
+        ]
+        "#).unwrap();
+        assert_debug_snapshot!(transforms);
+
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Header-To-Drop", "wrong".parse().unwrap());
+        headers.insert("X-Existing-Header", "wrong".parse().unwrap());
+        headers.insert("X-Header-Without-Changes", "good".parse().unwrap());
+        headers.insert("X-Env-Header-2", "wrong".parse().unwrap());
+        // Before transformation
+        assert_debug_snapshot!(headers);
+
+        transforms.transform(&mut headers, ctx);
+        // After transformation
+        assert_debug_snapshot!(headers);
     }
 }
