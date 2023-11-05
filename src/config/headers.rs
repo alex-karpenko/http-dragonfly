@@ -1,4 +1,4 @@
-use hyper::header::{HeaderValue, HeaderName};
+use hyper::header::{HeaderName, HeaderValue};
 use hyper::HeaderMap;
 use serde::{
     de::{self, MapAccess, Visitor},
@@ -135,7 +135,7 @@ impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
                     if !headers.contains_key(key.clone()) {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
-                        let key =  HeaderName::from_bytes(key.as_bytes()).unwrap();
+                        let key = HeaderName::from_bytes(key.as_bytes()).unwrap();
                         debug!("add: name={key}, value={value}");
                         headers.insert(&key, HeaderValue::from_str(&value).unwrap());
                     }
@@ -145,9 +145,8 @@ impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
                         let value = transform.value().as_ref().unwrap().as_str();
                         let value = env_with_context_no_errors(value, |v| ctx.get(&v.into()));
                         let debug_key = key.clone();
-                        let key =  HeaderName::from_bytes(key.as_bytes()).unwrap();
-                        let old =
-                            headers.insert(key, HeaderValue::from_str(&value).unwrap());
+                        let key = HeaderName::from_bytes(key.as_bytes()).unwrap();
+                        let old = headers.insert(key, HeaderValue::from_str(&value).unwrap());
                         if let Some(old) = old {
                             debug!(
                                 "update: name={}, old={}, new={}",
@@ -181,7 +180,7 @@ impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
 
 #[cfg(test)]
 mod tests {
-    use insta::{assert_ron_snapshot, assert_debug_snapshot};
+    use insta::{assert_debug_snapshot, assert_ron_snapshot};
 
     use crate::context::test_context::get_test_ctx;
 
@@ -234,7 +233,8 @@ mod tests {
         let ctx = get_test_ctx();
         assert_ron_snapshot!(ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
 
-        let transforms: HeadersTransformsList = serde_json::from_str(r#"
+        let transforms: HeadersTransformsList = serde_json::from_str(
+            r#"
         [
             {"add": "X-Some-New-Header", "value": "good"},
             {"update": "X-Existing-Header", "value": "good"},
@@ -244,7 +244,9 @@ mod tests {
             {"add": "X-Env-Header", "value": "${TEST_ENV_HEADER_TO_ADD}"},
             {"update": "X-Env-Header-2", "value": "${TEST_ENV_HEADER_TO_ADD}"}
         ]
-        "#).unwrap();
+        "#,
+        )
+        .unwrap();
         assert_debug_snapshot!(transforms);
 
         let mut headers = HeaderMap::new();

@@ -257,7 +257,6 @@ pub mod test_context {
             .unwrap()
     }
 
-
     #[test]
     fn context_with_test_environment() {
         let ctx = get_test_ctx();
@@ -323,7 +322,6 @@ pub mod test_context {
 
         assert_ron_snapshot!(response_ctx, {".own" => insta::sorted_redaction(), ".parent.own" => insta::sorted_redaction()});
     }
-
 }
 
 #[cfg(test)]
