@@ -18,6 +18,8 @@ use crate::{context::Context, errors::HttpDragonflyError};
 
 use self::listener::ListenerConfig;
 
+static APP_CONFIG: OnceCell<AppConfig> = OnceCell::new();
+
 pub trait ConfigValidator {
     fn validate(&self) -> Result<(), HttpDragonflyError>;
 }
@@ -30,6 +32,11 @@ pub struct AppConfig {
 
 impl<'a> AppConfig {
     pub fn new(filename: &String, ctx: &Context) -> Result<&'a AppConfig, HttpDragonflyError> {
+        let config = AppConfig::owned(filename, ctx)?;
+        Ok(APP_CONFIG.get_or_init(|| config))
+    }
+
+    fn owned(filename: &String, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
         info!("Loading config: {filename}");
         let config = read_to_string(filename).map_err(|e| HttpDragonflyError::LoadConfigFile {
             filename: filename.clone(),
@@ -40,10 +47,7 @@ impl<'a> AppConfig {
 
         debug!("Application config: {:#?}", config);
         match config.validate() {
-            Ok(_) => {
-                static APP_CONFIG: OnceCell<AppConfig> = OnceCell::new();
-                Ok(APP_CONFIG.get_or_init(|| config))
-            }
+            Ok(_) => Ok(config),
             Err(e) => Err(e),
         }
     }
@@ -78,7 +82,7 @@ mod test {
         glob!(
             TEST_CONFIGS_FOLDER,
             "good/*.yaml",
-            |path| assert_debug_snapshot!(AppConfig::new(
+            |path| assert_debug_snapshot!(AppConfig::owned(
                 &String::from(path.to_str().unwrap()),
                 &ctx
             ))
@@ -91,7 +95,7 @@ mod test {
         glob!(
             TEST_CONFIGS_FOLDER,
             "wrong/*.yaml",
-            |path| assert_debug_snapshot!(AppConfig::new(
+            |path| assert_debug_snapshot!(AppConfig::owned(
                 &String::from(path.to_str().unwrap()),
                 &ctx
             ))

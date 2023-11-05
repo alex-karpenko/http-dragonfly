@@ -1,8 +1,7 @@
 ---
 source: src/config.rs
-assertion_line: 81
-expression: "AppConfig::new(&String::from(path.to_str().unwrap()), &ctx)"
-input_file: tests/configs/good/99-minimal.yaml
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/good/02-config.yaml
 ---
 Ok(
     AppConfig {
