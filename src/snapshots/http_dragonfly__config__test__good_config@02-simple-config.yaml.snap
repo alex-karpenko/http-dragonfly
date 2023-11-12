@@ -1,7 +1,7 @@
 ---
 source: src/config.rs
 expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
-input_file: tests/configs/good/02-config.yaml
+input_file: tests/configs/good/02-simple-config.yaml
 ---
 Ok(
     AppConfig {

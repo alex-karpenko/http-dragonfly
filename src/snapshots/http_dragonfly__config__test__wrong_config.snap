@@ -1,8 +1,0 @@
----
-source: src/config.rs
-expression: "AppConfig::new(&String::from(path.to_str().unwrap()), &ctx)"
-input_file: tests/configs/wrong/01-minimal.yaml
----
-Err(
-    unable to parse config: invalid type: found unit, expected a sequence,
-)

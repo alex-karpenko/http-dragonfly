@@ -1,0 +1,8 @@
+listeners:
+  - strategy: conditional_routing
+    targets:
+    - url: https://www.google.com/
+      id: google-1
+      condition: default
+    - url: https://www.google.com/
+      id: google-2

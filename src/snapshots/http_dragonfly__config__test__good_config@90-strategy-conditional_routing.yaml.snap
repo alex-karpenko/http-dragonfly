@@ -1,0 +1,254 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/good/90-strategy-conditional_routing.yaml
+---
+Ok(
+    AppConfig {
+        listeners: [
+            ListenerConfig {
+                name: None,
+                listen_on: ListenOn {
+                    ip: 0.0.0.0,
+                    port: 8080,
+                },
+                timeout: 10s,
+                strategy: ConditionalRouting,
+                headers: None,
+                methods: None,
+                targets: [
+                    TargetConfig {
+                        id: Some(
+                            "google-1",
+                        ),
+                        url: "https://www.google.com/",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: Some(
+                            Default,
+                        ),
+                    },
+                    TargetConfig {
+                        id: Some(
+                            "google-2",
+                        ),
+                        url: "https://www.google.com/",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: Some(
+                            Filter(
+                                ConditionFilter {
+                                    filter: Owned(
+                                        Id(
+                                            5,
+                                        ),
+                                        [
+                                            Id,
+                                            ToString,
+                                            Path(
+                                                Id(
+                                                    0,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Optional,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Object(
+                                                [],
+                                            ),
+                                            Path(
+                                                Id(
+                                                    3,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Ord(
+                                                Id(
+                                                    9,
+                                                ),
+                                                Eq,
+                                                Id(
+                                                    10,
+                                                ),
+                                            ),
+                                            Id,
+                                            Str(
+                                                "body",
+                                            ),
+                                            Str(
+                                                "field",
+                                            ),
+                                            Path(
+                                                Id(
+                                                    6,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Index(
+                                                                Id(
+                                                                    7,
+                                                                ),
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                        (
+                                                            Index(
+                                                                Id(
+                                                                    8,
+                                                                ),
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Int(
+                                                1,
+                                            ),
+                                        ],
+                                    ),
+                                },
+                            ),
+                        ),
+                    },
+                    TargetConfig {
+                        id: Some(
+                            "google-3",
+                        ),
+                        url: "https://www.google.com/",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: Some(
+                            Filter(
+                                ConditionFilter {
+                                    filter: Owned(
+                                        Id(
+                                            5,
+                                        ),
+                                        [
+                                            Id,
+                                            ToString,
+                                            Path(
+                                                Id(
+                                                    0,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Optional,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Object(
+                                                [],
+                                            ),
+                                            Path(
+                                                Id(
+                                                    3,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Ord(
+                                                Id(
+                                                    9,
+                                                ),
+                                                Eq,
+                                                Id(
+                                                    10,
+                                                ),
+                                            ),
+                                            Id,
+                                            Str(
+                                                "headers",
+                                            ),
+                                            Str(
+                                                "host",
+                                            ),
+                                            Path(
+                                                Id(
+                                                    6,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Index(
+                                                                Id(
+                                                                    7,
+                                                                ),
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                        (
+                                                            Index(
+                                                                Id(
+                                                                    8,
+                                                                ),
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
+                                            Str(
+                                                "google.com",
+                                            ),
+                                        ],
+                                    ),
+                                },
+                            ),
+                        ),
+                    },
+                ],
+                response: ResponseConfig {
+                    target_selector: None,
+                    failed_status_regex: "4\\d{2}|5\\d{2}",
+                    no_targets_status: 500,
+                    override_config: None,
+                },
+            },
+        ],
+    },
+)

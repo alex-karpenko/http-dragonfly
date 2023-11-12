@@ -1,7 +1,7 @@
 ---
 source: src/config.rs
-expression: "AppConfig::new(&String::from(path.to_str().unwrap()), &ctx)"
-input_file: tests/configs/good/01-minimal.yaml
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/good/60-strategy-failed_then_ok.yaml
 ---
 Ok(
     AppConfig {
@@ -13,7 +13,7 @@ Ok(
                     port: 8080,
                 },
                 timeout: 10s,
-                strategy: FailedThenOverride,
+                strategy: FailedThenOk,
                 headers: None,
                 methods: None,
                 targets: [

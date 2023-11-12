@@ -1,0 +1,4 @@
+listeners:
+  - strategy: always_target_id
+    targets:
+    - url: https://www.google.com/

@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/20-strategy-always_target_id.yaml
+---
+Err(
+    invalid config: `target_selector` should be specified for strategy `always_target_id`,
+)

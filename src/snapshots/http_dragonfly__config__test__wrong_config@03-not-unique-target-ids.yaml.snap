@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/03-not-unique-target-ids.yaml
+---
+Err(
+    invalid config: all target IDs of the listener should be unique,
+)

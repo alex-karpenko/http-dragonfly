@@ -1,0 +1,4 @@
+listeners:
+  - strategy: conditional_routing
+    targets:
+    - url: https://www.google.com/

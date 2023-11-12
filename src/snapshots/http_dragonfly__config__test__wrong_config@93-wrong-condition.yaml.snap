@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/93-wrong-condition.yaml
+---
+Err(
+    unable to parse config: invalid config: found [SOMETHING] but expected one of [EXPECTED JQ STATEMENTS]
+)

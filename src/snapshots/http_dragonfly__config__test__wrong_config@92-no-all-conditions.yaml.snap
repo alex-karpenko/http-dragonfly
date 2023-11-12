@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/92-no-all-conditions.yaml
+---
+Err(
+    invalid config: all targets must have condition defined because strategy is `conditional_routing`,
+)

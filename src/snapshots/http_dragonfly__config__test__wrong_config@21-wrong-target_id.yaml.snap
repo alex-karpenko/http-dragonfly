@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/21-wrong-target_id.yaml
+---
+Err(
+    invalid config: `target_selector` points to unknown target_id `google-2`,
+)
