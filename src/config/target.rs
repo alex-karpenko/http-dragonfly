@@ -5,7 +5,10 @@ use serde::{
     Deserialize, Deserializer,
 };
 use serde_json::{json, value::Value as JsonValue, Value};
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 use tracing::{debug, error};
 
 use crate::{context::Context, errors::HttpDragonflyError};
@@ -240,7 +243,11 @@ impl ConfigValidator for [TargetConfig] {
         }
 
         // Make sure all targets have unique ID
-        let unique_targets_count = self.iter().map(TargetConfig::id).count();
+        let unique_targets_count = self
+            .iter()
+            .map(TargetConfig::id)
+            .collect::<HashSet<String>>()
+            .len();
         if unique_targets_count != self.len() {
             return Err(HttpDragonflyError::ValidateConfig {
                 cause: "all target IDs of the listener should be unique".into(),
