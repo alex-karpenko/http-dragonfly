@@ -95,10 +95,8 @@ mod test {
         glob!(
             TEST_CONFIGS_FOLDER,
             "wrong/*.yaml",
-            |path| assert_debug_snapshot!(AppConfig::owned(
-                &String::from(path.to_str().unwrap()),
-                &ctx
-            ))
+            |path| insta::with_settings!({filters => vec![(r#"unable to parse config: invalid config: found "(.+)" but expected one of (.+),"#, "unable to parse config: invalid config: found [SOMETHING] but expected one of [EXPECTED JQ STATEMENTS]")]},
+                {assert_debug_snapshot!(AppConfig::owned(&String::from(path.to_str().unwrap()),&ctx));})
         );
     }
 }
