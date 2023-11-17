@@ -54,7 +54,7 @@ pub trait ResponseBehavior {
     fn find_first_response(
         &self,
         responses: &ResponsesMap,
-        look_for_failed: bool,
+        response_kind: ResponseKind,
     ) -> Option<String>;
     fn error_response(&self, e: HyperError, status: &Option<ResponseStatus>) -> Response<Body>;
     fn empty_response(&self, status: ResponseStatus) -> Result<Response<Body>, Error>;
@@ -83,6 +83,12 @@ pub trait ResponseBehavior {
         responses: &mut ResponsesMap,
         ctx: &Context,
     ) -> Response<Body>;
+}
+
+#[derive(Debug)]
+pub enum ResponseKind {
+    Ok,
+    Failed,
 }
 
 impl ResponseBehavior for ResponseConfig {
@@ -131,22 +137,29 @@ impl ResponseBehavior for ResponseConfig {
     fn find_first_response(
         &self,
         responses: &ResponsesMap,
-        look_for_failed: bool,
+        response_kind: ResponseKind,
     ) -> Option<String> {
-        debug!(
-            "looking for {}",
-            if look_for_failed { "failed" } else { "ok" }
-        );
+        debug!("looking for {:?}", response_kind);
 
         let re = Regex::new(&self.failed_status_regex).unwrap();
         for key in responses.keys() {
             let (resp, _) = responses.get(key).unwrap();
             if let Some(resp) = resp {
                 let status: String = resp.status().to_string();
-                if re.is_match(&status) == look_for_failed {
-                    // Return first non-failed response target_id
-                    debug!("found target id={}", key);
-                    return Some(key.into());
+                let is_failed = re.is_match(&status);
+                match response_kind {
+                    ResponseKind::Ok => {
+                        if !is_failed {
+                            debug!("found target id={}", key);
+                            return Some(key.into());
+                        }
+                    }
+                    ResponseKind::Failed => {
+                        if is_failed {
+                            debug!("found target id={}", key);
+                            return Some(key.into());
+                        }
+                    }
                 }
             }
         }

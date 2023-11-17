@@ -46,11 +46,30 @@ Ok(
                                 ConditionFilter {
                                     filter: Owned(
                                         Id(
-                                            5,
+                                            8,
                                         ),
                                         [
                                             Id,
                                             ToString,
+                                            Object(
+                                                [],
+                                            ),
+                                            Path(
+                                                Id(
+                                                    2,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
                                             Path(
                                                 Id(
                                                     0,
@@ -67,32 +86,40 @@ Ok(
                                                     ],
                                                 ),
                                             ),
-                                            Object(
-                                                [],
+                                            Call(
+                                                Call {
+                                                    id: Id(
+                                                        7,
+                                                    ),
+                                                    typ: Throw,
+                                                    skip: 0,
+                                                    args: [],
+                                                },
                                             ),
-                                            Path(
+                                            Pipe(
                                                 Id(
-                                                    3,
+                                                    4,
                                                 ),
-                                                Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
+                                                false,
+                                                Id(
+                                                    5,
+                                                ),
+                                            ),
+                                            Comma(
+                                                Id(
+                                                    0,
+                                                ),
+                                                Id(
+                                                    6,
                                                 ),
                                             ),
                                             Ord(
                                                 Id(
-                                                    9,
+                                                    12,
                                                 ),
                                                 Eq,
                                                 Id(
-                                                    10,
+                                                    13,
                                                 ),
                                             ),
                                             Id,
@@ -104,14 +131,14 @@ Ok(
                                             ),
                                             Path(
                                                 Id(
-                                                    6,
+                                                    9,
                                                 ),
                                                 Path(
                                                     [
                                                         (
                                                             Index(
                                                                 Id(
-                                                                    7,
+                                                                    10,
                                                                 ),
                                                             ),
                                                             Essential,
@@ -119,7 +146,7 @@ Ok(
                                                         (
                                                             Index(
                                                                 Id(
-                                                                    8,
+                                                                    11,
                                                                 ),
                                                             ),
                                                             Essential,
@@ -151,11 +178,30 @@ Ok(
                                 ConditionFilter {
                                     filter: Owned(
                                         Id(
-                                            5,
+                                            8,
                                         ),
                                         [
                                             Id,
                                             ToString,
+                                            Object(
+                                                [],
+                                            ),
+                                            Path(
+                                                Id(
+                                                    2,
+                                                ),
+                                                Path(
+                                                    [
+                                                        (
+                                                            Range(
+                                                                None,
+                                                                None,
+                                                            ),
+                                                            Essential,
+                                                        ),
+                                                    ],
+                                                ),
+                                            ),
                                             Path(
                                                 Id(
                                                     0,
@@ -172,32 +218,40 @@ Ok(
                                                     ],
                                                 ),
                                             ),
-                                            Object(
-                                                [],
+                                            Call(
+                                                Call {
+                                                    id: Id(
+                                                        7,
+                                                    ),
+                                                    typ: Throw,
+                                                    skip: 0,
+                                                    args: [],
+                                                },
                                             ),
-                                            Path(
+                                            Pipe(
                                                 Id(
-                                                    3,
+                                                    4,
                                                 ),
-                                                Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
+                                                false,
+                                                Id(
+                                                    5,
+                                                ),
+                                            ),
+                                            Comma(
+                                                Id(
+                                                    0,
+                                                ),
+                                                Id(
+                                                    6,
                                                 ),
                                             ),
                                             Ord(
                                                 Id(
-                                                    9,
+                                                    12,
                                                 ),
                                                 Eq,
                                                 Id(
-                                                    10,
+                                                    13,
                                                 ),
                                             ),
                                             Id,
@@ -209,14 +263,14 @@ Ok(
                                             ),
                                             Path(
                                                 Id(
-                                                    6,
+                                                    9,
                                                 ),
                                                 Path(
                                                     [
                                                         (
                                                             Index(
                                                                 Id(
-                                                                    7,
+                                                                    10,
                                                                 ),
                                                             ),
                                                             Essential,
@@ -224,7 +278,7 @@ Ok(
                                                         (
                                                             Index(
                                                                 Id(
-                                                                    8,
+                                                                    11,
                                                                 ),
                                                             ),
                                                             Essential,

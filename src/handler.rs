@@ -15,7 +15,7 @@ use crate::{
     config::{
         headers::HeadersTransformator,
         listener::ListenerConfig,
-        response::ResponseBehavior,
+        response::{ResponseBehavior, ResponseKind},
         strategy::ResponseStrategy,
         target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
@@ -237,8 +237,8 @@ impl RequestHandler {
         }
 
         // Select/create response according to strategy
-        let ok_target_id = response_cfg.find_first_response(&responses, false);
-        let failed_target_id = response_cfg.find_first_response(&responses, true);
+        let ok_target_id = response_cfg.find_first_response(&responses, ResponseKind::Ok);
+        let failed_target_id = response_cfg.find_first_response(&responses, ResponseKind::Failed);
         let selector_target_id = response_cfg.target_selector().clone();
         let resp =
             match &self.listener_cfg.strategy() {
