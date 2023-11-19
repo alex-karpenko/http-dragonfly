@@ -43,6 +43,7 @@ impl<'a> AppConfig {
             cause: e,
         })?;
         let config = env_with_context_no_errors(&config, |v| ctx.get(&v.into()));
+        let config: AppConfig = serde
         let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
 
         debug!("Application config: {:#?}", config);
