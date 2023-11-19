@@ -4,5 +4,5 @@ expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
 input_file: tests/configs/wrong/05-wrong-error-override-config.yaml
 ---
 Err(
-    unable to parse config: invalid type: found string "500 Internal error", expected u16,
+    unable to parse config: listeners[0].targets[0].error_status: invalid type: string "500 Internal error", expected u16 at line 5 column 21,
 )

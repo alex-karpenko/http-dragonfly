@@ -5,10 +5,10 @@ use thiserror::Error;
 pub enum HttpDragonflyError {
     #[error("unable to load config file '{}': {}", .filename, .cause)]
     LoadConfigFile { filename: String, cause: io::Error },
-    #[error("unable to parse config: {}", .cause.kind)]
+    #[error("unable to parse config: {}", .cause)]
     ParseConfigFile {
         #[from]
-        cause: figment::Error,
+        cause: serde_yaml::Error,
     },
     #[error("invalid config: {}", .cause)]
     ValidateConfig { cause: String },
@@ -22,10 +22,8 @@ impl std::fmt::Debug for HttpDragonflyError {
 
 #[cfg(test)]
 mod tests {
-    use std::io::ErrorKind;
-
-    use figment::Error;
     use insta::assert_debug_snapshot;
+    use std::io::ErrorKind;
 
     use super::*;
 
@@ -34,9 +32,6 @@ mod tests {
         assert_debug_snapshot!(HttpDragonflyError::LoadConfigFile {
             filename: "test-config.yaml".into(),
             cause: io::Error::new(ErrorKind::Other, "snapshot test cause")
-        });
-        assert_debug_snapshot!(HttpDragonflyError::ParseConfigFile {
-            cause: Error::from("snapshot test cause".to_string())
         });
         assert_debug_snapshot!(HttpDragonflyError::ValidateConfig {
             cause: "snapshot test cause".to_string()

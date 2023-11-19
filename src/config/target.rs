@@ -237,6 +237,13 @@ impl ConfigValidator for TargetConfig {
 
 impl ConfigValidator for [TargetConfig] {
     fn validate(&self) -> Result<(), HttpDragonflyError> {
+        // Targets list shouldn't be empty
+        if self.is_empty() {
+            return Err(HttpDragonflyError::ValidateConfig {
+                cause: "at least one target must be defined".into(),
+            });
+        }
+
         // Validate each target
         for target in self {
             target.validate()?;

@@ -3,11 +3,6 @@ pub mod listener;
 pub mod response;
 pub mod strategy;
 pub mod target;
-
-use figment::{
-    providers::{Format, Yaml},
-    Figment,
-};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
@@ -43,8 +38,7 @@ impl<'a> AppConfig {
             cause: e,
         })?;
         let config = env_with_context_no_errors(&config, |v| ctx.get(&v.into()));
-        let config: AppConfig = serde
-        let config: AppConfig = Figment::new().merge(Yaml::string(&config)).extract()?;
+        let config: AppConfig = serde_yaml::from_str(&config)?;
 
         debug!("Application config: {:#?}", config);
         match config.validate() {
@@ -96,8 +90,11 @@ mod test {
         glob!(
             TEST_CONFIGS_FOLDER,
             "wrong/*.yaml",
-            |path| insta::with_settings!({filters => vec![(r#"unable to parse config: invalid config: found "(.+)" but expected one of (.+),"#, "unable to parse config: invalid config: found [SOMETHING] but expected one of [EXPECTED JQ STATEMENTS]")]},
-                {assert_debug_snapshot!(AppConfig::owned(&String::from(path.to_str().unwrap()),&ctx));})
+            |path| insta::with_settings!({filters => vec![(
+                r#"unable to parse config: listeners\[0\]\.targets\[1\]\.condition: invalid config: found "/" but expected one of "(.+)" at line 9 column 18,"#,
+                r#"unable to parse config: listeners[0].targets[1].condition: invalid config: found "/" but expected one of "[LIST OF ALLOWED JQ STATEMENTS]" at line 9 column 18,"#
+            )]},
+            {assert_debug_snapshot!(AppConfig::owned(&String::from(path.to_str().unwrap()),&ctx));})
         );
     }
 }

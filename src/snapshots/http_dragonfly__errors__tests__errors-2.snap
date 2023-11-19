@@ -1,5 +1,5 @@
 ---
 source: src/errors.rs
-expression: "HttpDragonflyError::ParseConfigFile {\n    cause: Error::from(\"snapshot test cause\".to_string()),\n}"
+expression: "HttpDragonflyError::ValidateConfig {\n    cause: \"snapshot test cause\".to_string(),\n}"
 ---
-unable to parse config: snapshot test cause
+invalid config: snapshot test cause
