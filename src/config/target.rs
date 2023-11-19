@@ -240,7 +240,7 @@ impl ConfigValidator for [TargetConfig] {
         // Targets list shouldn't be empty
         if self.is_empty() {
             return Err(HttpDragonflyError::ValidateConfig {
-                cause: "at least one target must be defined".into(),
+                cause: "at least one target must be configured".into(),
             });
         }
 

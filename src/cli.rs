@@ -30,6 +30,7 @@ pub struct CliConfig {
 }
 
 impl CliConfig {
+    /// Constructs CLI config
     pub fn new() -> CliConfig {
         let config: CliConfig = Parser::parse();
         config.setup_logger();
@@ -39,6 +40,7 @@ impl CliConfig {
         config
     }
 
+    /// Creates global logger and set requested log level and format
     fn setup_logger(&self) {
         let level_filter = if self.debug {
             LevelFilter::DEBUG
@@ -61,6 +63,7 @@ impl CliConfig {
         };
     }
 
+    /// Validates mask (regex) to use for context environment variables
     fn parse_env_mask(mask: &str) -> Result<String, String> {
         let mask = mask.trim();
         if mask.is_empty() || mask == "*" {
@@ -72,10 +75,12 @@ impl CliConfig {
         }
     }
 
+    /// Getter for config path
     pub fn config_path(&self) -> String {
         self.config.to_string()
     }
 
+    /// Getter for environment variables mask
     pub fn env_mask(&self) -> &str {
         self.env_mask.as_ref()
     }

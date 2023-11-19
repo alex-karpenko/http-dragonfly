@@ -54,6 +54,10 @@ impl<'a> AppConfig {
 
 impl ConfigValidator for AppConfig {
     fn validate(&self) -> Result<(), HttpDragonflyError> {
+        if self.listeners().is_empty() {
+            return Err(HttpDragonflyError::ValidateConfig { cause: String::from("at least one listener must be configured") })
+        }
+
         for listener in self.listeners() {
             listener.validate()?;
         }
