@@ -5,7 +5,6 @@ use hyper::{
     Response, StatusCode, Uri,
 };
 use hyper_tls::HttpsConnector;
-
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
 use tracing::{debug, error, info, warn};
@@ -14,9 +13,8 @@ use uuid::Uuid;
 use crate::{
     config::{
         headers::HeadersTransformator,
-        listener::ListenerConfig,
+        listener::{ListenerConfig, ResponseStrategy},
         response::{ResponseBehavior, ResponseKind},
-        strategy::ResponseStrategy,
         target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
     },
     context::Context,

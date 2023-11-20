@@ -46,6 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             async move { Ok::<_, Infallible>(service) }
         });
+
         let server = server
             .serve(make_service)
             .with_graceful_shutdown(shutdown_signal(name));
@@ -60,7 +61,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 /// Shutdown signal handler
 ///
-/// Subscribes and wait on one of the terminate/interrupt/quit/hangup signals
+/// Subscribes on and waits for one of the terminate/interrupt/quit/hangup signals
 async fn shutdown_signal(listener_name: String) {
     let mut terminate = signal(SignalKind::terminate())
         .expect("{listener_name}: unable to install TERM signal handler");

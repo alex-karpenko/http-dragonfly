@@ -1,7 +1,6 @@
 pub mod headers;
 pub mod listener;
 pub mod response;
-pub mod strategy;
 pub mod target;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
@@ -55,7 +54,9 @@ impl<'a> AppConfig {
 impl ConfigValidator for AppConfig {
     fn validate(&self) -> Result<(), HttpDragonflyError> {
         if self.listeners().is_empty() {
-            return Err(HttpDragonflyError::ValidateConfig { cause: String::from("at least one listener must be configured") })
+            return Err(HttpDragonflyError::ValidateConfig {
+                cause: String::from("at least one listener must be configured"),
+            });
         }
 
         for listener in self.listeners() {
