@@ -30,7 +30,7 @@ pub struct RequestHandler {
 
 impl RequestHandler {
     pub fn new(cfg: &'static ListenerConfig, ctx: &'static Context) -> Self {
-        info!("Creating listener: {}, on: {}", cfg.name(), cfg.on());
+        info!("Creating listener: {}, on: {}", cfg.id(), cfg.on());
         Self {
             listener_cfg: cfg,
             root_ctx: ctx,
@@ -46,7 +46,7 @@ impl RequestHandler {
         info!(
             "{req_id}: accepted from: {}, to: {}, method: {}",
             addr,
-            self.listener_cfg.name(),
+            self.listener_cfg.id(),
             req.method()
         );
 
@@ -57,7 +57,7 @@ impl RequestHandler {
             error!(
                 "{req_id}: rejected, not allowed method: {}, listener: {}",
                 req.method(),
-                self.listener_cfg.name()
+                self.listener_cfg.id()
             );
             return response_cfg.empty_response(StatusCode::METHOD_NOT_ALLOWED.into());
         }
@@ -70,7 +70,7 @@ impl RequestHandler {
         // Add own context - listener + request
         let ctx = self
             .root_ctx
-            .with_request(&addr, &req_parts, self.listener_cfg.name());
+            .with_request(&addr, &req_parts, self.listener_cfg.id());
 
         // Prepare new headers
         let mut headers = req_parts.headers.clone();
@@ -83,7 +83,7 @@ impl RequestHandler {
         // Process targets
         debug!(
             "Listener={}, strategy={}",
-            self.listener_cfg.name(),
+            self.listener_cfg.id(),
             self.listener_cfg.strategy()
         );
 
@@ -119,7 +119,7 @@ impl RequestHandler {
                                     targets.push(target);
                                 } else {
                                     // Error - more than one target has true condition
-                                    error!("{req_id}: not routed: more than one targets satisfy condition, listener: {}, targets: `{}` and `{}`", self.listener_cfg.name(), targets[0].id(), target.id());
+                                    error!("{req_id}: not routed: more than one targets satisfy condition, listener: {}, targets: `{}` and `{}`", self.listener_cfg.id(), targets[0].id(), target.id());
                                     return response_cfg.no_target_response(&ctx);
                                 }
                             }
@@ -150,7 +150,7 @@ impl RequestHandler {
         if targets.is_empty() {
             warn!(
                 "{req_id}: no targets satisfy conditions, listener: {}",
-                self.listener_cfg.name()
+                self.listener_cfg.id()
             );
         }
 

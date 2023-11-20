@@ -28,7 +28,7 @@ const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct ListenerConfig {
-    name: Option<String>,
+    id: Option<String>,
     #[serde(rename = "on", default)]
     listen_on: ListenOn,
     #[serde(
@@ -51,8 +51,8 @@ impl ListenerConfig {
     }
 
     /// Returns the name of this [`ListenerConfig`].
-    pub fn name(&self) -> String {
-        if let Some(name) = &self.name {
+    pub fn id(&self) -> String {
+        if let Some(name) = &self.id {
             name.clone()
         } else {
             format!("LISTENER-{}", self.listen_on)

@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let server = Server::bind(&cfg.socket());
         let server = server.http1_header_read_timeout(cfg.timeout());
 
-        let name = cfg.name();
+        let name = cfg.id();
         let ctx = root_ctx.clone();
         let cfg = cfg.clone();
         let handler = RequestHandler::new(*cfg, *ctx);

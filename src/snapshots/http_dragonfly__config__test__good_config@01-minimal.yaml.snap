@@ -1,13 +1,13 @@
 ---
 source: src/config.rs
-expression: "AppConfig::new(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
 input_file: tests/configs/good/01-minimal.yaml
 ---
 Ok(
     AppConfig {
         listeners: [
             ListenerConfig {
-                name: None,
+                id: None,
                 listen_on: ListenOn {
                     ip: 0.0.0.0,
                     port: 8080,

@@ -7,7 +7,7 @@ Ok(
     AppConfig {
         listeners: [
             ListenerConfig {
-                name: Some(
+                id: Some(
                     "Listener-1",
                 ),
                 listen_on: ListenOn {
