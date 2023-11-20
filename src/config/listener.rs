@@ -106,6 +106,66 @@ impl ListenerConfig {
     pub fn on(&self) -> String {
         format!("{}", self.listen_on)
     }
+
+    fn validate_strategy(&self) -> Result<(), HttpDragonflyError> {
+        // Validate strategy requirements
+        match self.strategy() {
+            ResponseStrategy::ConditionalRouting => {
+                // Make sure that all targets have condition defined if strategy is conditional_routing
+                if self.targets().iter().any(|t| t.condition().is_none()) {
+                    return Err(HttpDragonflyError::ValidateConfig {
+                        cause: format!(
+                            "all targets must have condition defined because strategy is `{}`",
+                            self.strategy()
+                        ),
+                    });
+                }
+                // Ensure singe default condition is present
+                let default_count = self
+                    .targets()
+                    .iter()
+                    .filter(|t| {
+                        matches!(
+                            t.condition().as_ref().unwrap(),
+                            TargetConditionConfig::Default
+                        )
+                    })
+                    .count();
+                if default_count > 1 {
+                    return Err(HttpDragonflyError::ValidateConfig {
+                        cause: "more than one default target is defined but only one is allowed"
+                            .into(),
+                    });
+                }
+            }
+            ResponseStrategy::AlwaysTargetId
+            | ResponseStrategy::FailedThenTargetId
+            | ResponseStrategy::OkThenTargetId => {
+                // Make sure that target_selector has valid target_id specified if strategy is *_target_id
+                let target_ids: Vec<String> = self.targets().iter().map(TargetConfig::id).collect();
+                if let Some(target_id) = self.response().target_selector() {
+                    if !target_ids.contains(target_id) {
+                        return Err(HttpDragonflyError::ValidateConfig {
+                            cause: format!(
+                                "`target_selector` points to unknown target_id `{}`",
+                                target_id
+                            ),
+                        });
+                    }
+                } else {
+                    return Err(HttpDragonflyError::ValidateConfig {
+                        cause: format!(
+                            "`target_selector` should be specified for strategy `{}`",
+                            self.strategy()
+                        ),
+                    });
+                }
+            }
+            _ => {}
+        };
+
+        Ok(())
+    }
 }
 
 #[derive(Deserialize, Debug, Default, Display)]
@@ -236,78 +296,10 @@ impl ConfigValidator for ListenerConfig {
     fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
         self.targets().validate()?;
         self.response().validate()?;
-
-        // Validate strategy requirements
-        validate_strategy(
-            self.strategy(),
-            self.targets(),
-            self.response().target_selector(),
-        )?;
+        self.validate_strategy()?;
 
         Ok(())
     }
-}
-
-fn validate_strategy(
-    strategy: &ResponseStrategy,
-    targets: &[TargetConfig],
-    target_selector: &Option<String>,
-) -> Result<(), HttpDragonflyError> {
-    // Validate strategy requirements
-    match strategy {
-        ResponseStrategy::ConditionalRouting => {
-            // Make sure that all targets have condition defined if strategy is conditional_routing
-            if targets.iter().any(|t| t.condition().is_none()) {
-                return Err(HttpDragonflyError::ValidateConfig {
-                    cause: format!(
-                        "all targets must have condition defined because strategy is `{}`",
-                        strategy
-                    ),
-                });
-            }
-            // Ensure singe default condition is present
-            let default_count = targets
-                .iter()
-                .filter(|t| {
-                    matches!(
-                        t.condition().as_ref().unwrap(),
-                        TargetConditionConfig::Default
-                    )
-                })
-                .count();
-            if default_count > 1 {
-                return Err(HttpDragonflyError::ValidateConfig {
-                    cause: "more than one default target is defined but only one is allowed".into(),
-                });
-            }
-        }
-        ResponseStrategy::AlwaysTargetId
-        | ResponseStrategy::FailedThenTargetId
-        | ResponseStrategy::OkThenTargetId => {
-            // Make sure that target_selector has valid target_id specified if strategy is *_target_id
-            let target_ids: Vec<String> = targets.iter().map(TargetConfig::id).collect();
-            if let Some(target_id) = target_selector {
-                if !target_ids.contains(target_id) {
-                    return Err(HttpDragonflyError::ValidateConfig {
-                        cause: format!(
-                            "`target_selector` points to unknown target_id `{}`",
-                            target_id
-                        ),
-                    });
-                }
-            } else {
-                return Err(HttpDragonflyError::ValidateConfig {
-                    cause: format!(
-                        "`target_selector` should be specified for strategy `{}`",
-                        strategy
-                    ),
-                });
-            }
-        }
-        _ => {}
-    };
-
-    Ok(())
 }
 
 #[cfg(test)]
