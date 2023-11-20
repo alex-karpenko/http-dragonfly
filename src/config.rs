@@ -5,7 +5,10 @@ pub mod target;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
-use std::fs::read_to_string;
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+};
 use tracing::{debug, info};
 
 use crate::{context::Context, errors::HttpDragonflyError};
@@ -26,17 +29,21 @@ pub struct AppConfig {
 
 impl<'a> AppConfig {
     pub fn new(filename: &String, ctx: &Context) -> Result<&'a AppConfig, HttpDragonflyError> {
-        let config = AppConfig::owned(filename, ctx)?;
+        let config = AppConfig::from_file(filename, ctx)?;
         Ok(APP_CONFIG.get_or_init(|| config))
     }
 
-    fn owned(filename: &String, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
+    fn from_file(filename: &String, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
         info!("Loading config: {filename}");
-        let config = read_to_string(filename).map_err(|e| HttpDragonflyError::LoadConfigFile {
-            filename: filename.clone(),
-            cause: e,
-        })?;
-        let config = env_with_context_no_errors(&config, |v| ctx.get(&v.into()));
+        let mut file = File::open(filename)?;
+        AppConfig::from_reader(&mut file, ctx)
+    }
+
+    fn from_reader(reader: &mut dyn Read, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
+        let mut reader = BufReader::new(reader);
+        let mut buf = String::new();
+        reader.read_to_string(&mut buf)?;
+        let config = env_with_context_no_errors(&buf, |v| ctx.get(&v.into()));
         let config: AppConfig = serde_yaml::from_str(&config)?;
 
         debug!("Application config: {:#?}", config);
@@ -82,7 +89,7 @@ mod test {
         glob!(
             TEST_CONFIGS_FOLDER,
             "good/*.yaml",
-            |path| assert_debug_snapshot!(AppConfig::owned(
+            |path| assert_debug_snapshot!(AppConfig::from_file(
                 &String::from(path.to_str().unwrap()),
                 &ctx
             ))
@@ -99,7 +106,7 @@ mod test {
                 r#"unable to parse config: listeners\[0\]\.targets\[1\]\.condition: invalid config: found "/" but expected one of "(.+)" at line 9 column 18,"#,
                 r#"unable to parse config: listeners[0].targets[1].condition: invalid config: found "/" but expected one of "[LIST OF ALLOWED JQ STATEMENTS]" at line 9 column 18,"#
             )]},
-            {assert_debug_snapshot!(AppConfig::owned(&String::from(path.to_str().unwrap()),&ctx));})
+            {assert_debug_snapshot!(AppConfig::from_file(&String::from(path.to_str().unwrap()),&ctx));})
         );
     }
 }

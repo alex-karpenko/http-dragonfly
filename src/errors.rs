@@ -3,8 +3,11 @@ use thiserror::Error;
 
 #[derive(Error)]
 pub enum HttpDragonflyError {
-    #[error("unable to load config file '{}': {}", .filename, .cause)]
-    LoadConfigFile { filename: String, cause: io::Error },
+    #[error("unable to load config: {}", .cause)]
+    LoadConfig {
+        #[from]
+        cause: io::Error,
+    },
     #[error("unable to parse config: {}", .cause)]
     ParseConfigFile {
         #[from]
@@ -29,8 +32,7 @@ mod tests {
 
     #[test]
     fn errors() {
-        assert_debug_snapshot!(HttpDragonflyError::LoadConfigFile {
-            filename: "test-config.yaml".into(),
+        assert_debug_snapshot!(HttpDragonflyError::LoadConfig {
             cause: io::Error::new(ErrorKind::Other, "snapshot test cause")
         });
         assert_debug_snapshot!(HttpDragonflyError::ValidateConfig {

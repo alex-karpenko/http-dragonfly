@@ -1,5 +1,5 @@
 ---
 source: src/errors.rs
-expression: "HttpDragonflyError::LoadConfigFile {\n    filename: \"test-config.yaml\".into(),\n    cause: io::Error::new(ErrorKind::Other, \"snapshot test cause\"),\n}"
+expression: "HttpDragonflyError::LoadConfig {\n    cause: io::Error::new(ErrorKind::Other, \"snapshot test cause\"),\n}"
 ---
-unable to load config file 'test-config.yaml': snapshot test cause
+unable to load config: snapshot test cause
