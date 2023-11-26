@@ -70,15 +70,6 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn iter(&'a self) -> Box<dyn Iterator<Item = (&'a String, &'a String)> + 'a> {
-        let iter = Box::new(self.own.iter());
-        Box::new(Iter {
-            ctx: self,
-            iter,
-            finished: false,
-        })
-    }
-
     pub fn with_request(
         &'a self,
         addr: &'a SocketAddr,
@@ -105,11 +96,11 @@ impl<'a> Context<'a> {
         }
 
         // CTX_REQUEST_HEADERS_<UPPERCASE_HEADER_NAME>
-        req.headers.iter().for_each(|(n, v)| {
+        for (n, v) in &req.headers {
             let n = n.as_str().to_uppercase().replace('-', "_");
             let v = v.to_str().unwrap_or("").to_string();
             own.insert(format!("CTX_REQUEST_HEADERS_{n}"), v);
-        });
+        }
 
         self.with(own)
     }
@@ -131,23 +122,32 @@ impl<'a> Context<'a> {
         // CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME>
         // CTX_RESPONSE_STATUS
         own.insert("CTX_RESPONSE_STATUS".into(), resp.status().to_string());
-        resp.headers().iter().for_each(|(n, v)| {
+        for (n, v) in resp.headers() {
             let n = n.as_str().to_uppercase().replace('-', "_");
             let v = v.to_str().unwrap_or("").to_string();
             own.insert(format!("CTX_RESPONSE_HEADERS_{n}"), v);
-        });
+        }
 
         self.with(own)
     }
+
+    pub fn iter(&self) -> ContextIterator {
+        let iter = Box::new(self.own.iter());
+        ContextIterator {
+            ctx: self,
+            iter,
+            finished: false,
+        }
+    }
 }
 
-pub struct Iter<'a> {
+pub struct ContextIterator<'a> {
     ctx: &'a Context<'a>,
     iter: Box<dyn Iterator<Item = (&'a String, &'a String)> + 'a>,
     finished: bool,
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl<'a> Iterator for ContextIterator<'a> {
     type Item = (&'a String, &'a String);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -157,7 +157,7 @@ impl<'a> Iterator for Iter<'a> {
             None
         } else if !self.finished {
             self.finished = true;
-            self.iter = self.ctx.parent.unwrap().iter();
+            self.iter = Box::new(self.ctx.parent.unwrap().iter());
             self.iter.next()
         } else {
             None
@@ -165,6 +165,14 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
+impl<'a> IntoIterator for &'a Context<'a> {
+    type Item = (&'a String, &'a String);
+    type IntoIter = ContextIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
 pub trait RootEnvironment {
     fn get_environment(&self) -> ContextMap;
 }

@@ -5,7 +5,7 @@ mod errors;
 mod handler;
 
 use cli::CliConfig;
-use config::{listener::ListenerConfig, AppConfig};
+use config::AppConfig;
 use context::{Context, RootOsEnvironment};
 use futures_util::future::join_all;
 use handler::RequestHandler;
@@ -28,10 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let app_config = AppConfig::new(&cli_config.config_path(), *root_ctx)?;
     let mut servers = vec![];
 
-    let listeners: Vec<Arc<&ListenerConfig>> =
-        app_config.listeners().iter().map(Arc::new).collect();
-
-    for cfg in listeners {
+    for cfg in app_config.listeners().iter().map(Arc::new) {
         let server = Server::bind(&cfg.socket());
         let server = server.http1_header_read_timeout(cfg.timeout());
 
