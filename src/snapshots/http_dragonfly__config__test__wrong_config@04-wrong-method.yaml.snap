@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/04-wrong-method.yaml
+---
+Err(
+    unable to parse config: listeners[0].methods[0]: unknown variant `ANY`, expected one of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `HEAD` at line 5 column 7,
+)

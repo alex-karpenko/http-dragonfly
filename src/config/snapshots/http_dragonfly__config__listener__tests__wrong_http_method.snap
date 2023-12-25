@@ -1,0 +1,7 @@
+---
+source: src/config/listener.rs
+expression: wrong_method
+---
+Err(
+    Error("unknown variant `UPDATE`, expected one of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `HEAD`", line: 10, column: 20),
+)

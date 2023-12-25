@@ -1,0 +1,5 @@
+---
+source: src/cli.rs
+expression: "CliConfig::parse_env_mask(DEFAULT_ENV_REGEX)"
+---
+Ok("^HTTP_ENV_[a-zA-Z0-9_]+$")

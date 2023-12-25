@@ -1,0 +1,3 @@
+listeners:
+  - targets:
+    - url: https://www.google.com/

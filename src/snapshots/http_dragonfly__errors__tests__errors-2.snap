@@ -1,0 +1,5 @@
+---
+source: src/errors.rs
+expression: "HttpDragonflyError::ValidateConfig {\n    cause: \"snapshot test cause\".to_string(),\n}"
+---
+invalid config: snapshot test cause

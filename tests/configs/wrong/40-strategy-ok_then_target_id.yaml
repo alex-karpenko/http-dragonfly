@@ -1,0 +1,4 @@
+listeners:
+  - strategy: ok_then_target_id
+    targets:
+    - url: https://www.google.com/

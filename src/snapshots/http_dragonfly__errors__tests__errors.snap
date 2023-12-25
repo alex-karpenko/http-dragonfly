@@ -1,0 +1,5 @@
+---
+source: src/errors.rs
+expression: "HttpDragonflyError::LoadConfig {\n    cause: io::Error::new(ErrorKind::Other, \"snapshot test cause\"),\n}"
+---
+unable to load config: snapshot test cause

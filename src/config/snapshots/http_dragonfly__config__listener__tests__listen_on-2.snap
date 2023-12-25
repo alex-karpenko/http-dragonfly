@@ -1,0 +1,8 @@
+---
+source: src/config/listener.rs
+expression: "ListenOn::from_str(\"1.2.3.4:8888\").unwrap()"
+---
+ListenOn(
+  ip: "1.2.3.4",
+  port: 8888,
+)

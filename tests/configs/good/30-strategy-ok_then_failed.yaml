@@ -1,0 +1,4 @@
+listeners:
+  - strategy: ok_then_failed
+    targets:
+    - url: https://www.google.com/

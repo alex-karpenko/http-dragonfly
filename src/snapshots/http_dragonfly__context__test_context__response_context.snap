@@ -1,0 +1,19 @@
+---
+source: src/context.rs
+expression: response_ctx
+---
+Context(
+  own: {
+    "CTX_RESPONSE_HEADERS_X_SOME_HEADER": "some header value",
+    "CTX_RESPONSE_STATUS": "200 OK",
+  },
+  parent: Some(Context(
+    own: {
+      "CTX_APP_NAME": "http-dragonfly",
+      "CTX_APP_VERSION": "0.1.0",
+      "TEST_ENV_HEADER_TO_ADD": "TEST_ENV_HEADER_VALUE",
+      "TEST_ENV_KEY": "TEST_ENV_VALUE",
+    },
+    parent: None,
+  )),
+)

@@ -1,0 +1,8 @@
+---
+source: src/config/headers.rs
+expression: update_action
+---
+HeaderTransform(
+  action: update("new_header"),
+  value: Some("new_value"),
+)

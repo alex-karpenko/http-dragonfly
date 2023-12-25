@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/01-without-targets.yaml
+---
+Err(
+    invalid config: at least one target must be configured,
+)

@@ -1,0 +1,40 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/good/60-strategy-failed_then_ok.yaml
+---
+Ok(
+    AppConfig {
+        listeners: [
+            ListenerConfig {
+                id: None,
+                listen_on: ListenOn {
+                    ip: 0.0.0.0,
+                    port: 8080,
+                },
+                timeout: 10s,
+                strategy: FailedThenOk,
+                headers: None,
+                methods: None,
+                targets: [
+                    TargetConfig {
+                        id: None,
+                        url: "https://www.google.com/",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: None,
+                    },
+                ],
+                response: ResponseConfig {
+                    target_selector: None,
+                    failed_status_regex: "4\\d{2}|5\\d{2}",
+                    no_targets_status: 500,
+                    override_config: None,
+                },
+            },
+        ],
+    },
+)

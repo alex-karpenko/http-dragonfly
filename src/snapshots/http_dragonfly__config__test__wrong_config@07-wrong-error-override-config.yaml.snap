@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+input_file: tests/configs/wrong/07-wrong-error-override-config.yaml
+---
+Err(
+    invalid config: `error_status` can be set if `on_error` is `status` only, target `TARGET-https://www.google.com/`,
+)

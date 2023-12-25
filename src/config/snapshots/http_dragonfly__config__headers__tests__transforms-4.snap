@@ -1,0 +1,11 @@
+---
+source: src/config/headers.rs
+expression: headers
+---
+{
+    "x-some-new-header": "good",
+    "x-existing-header": "good",
+    "x-header-without-changes": "good",
+    "x-env-header-2": "TEST_ENV_HEADER_VALUE",
+    "x-env-header": "TEST_ENV_HEADER_VALUE",
+}

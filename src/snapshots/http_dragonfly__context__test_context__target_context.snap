@@ -1,0 +1,19 @@
+---
+source: src/context.rs
+expression: ctx
+---
+Context(
+  own: {
+    "CTX_TARGET_HOST": "www.google.com",
+    "CTX_TARGET_ID": "TEST-TARGET-ID",
+  },
+  parent: Some(Context(
+    own: {
+      "CTX_APP_NAME": "http-dragonfly",
+      "CTX_APP_VERSION": "0.1.0",
+      "TEST_ENV_HEADER_TO_ADD": "TEST_ENV_HEADER_VALUE",
+      "TEST_ENV_KEY": "TEST_ENV_VALUE",
+    },
+    parent: None,
+  )),
+)

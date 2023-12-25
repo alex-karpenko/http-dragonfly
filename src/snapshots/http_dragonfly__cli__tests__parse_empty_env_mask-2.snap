@@ -1,0 +1,5 @@
+---
+source: src/cli.rs
+expression: "CliConfig::parse_env_mask(\"   \")"
+---
+Ok(".+")

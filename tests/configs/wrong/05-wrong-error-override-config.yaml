@@ -1,0 +1,5 @@
+listeners:
+  - targets:
+    - url: https://www.google.com/
+      on_error: propagate
+      error_status: 500 Internal error
