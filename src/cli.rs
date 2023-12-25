@@ -27,6 +27,10 @@ pub struct CliConfig {
     /// Allowed environment variables mask (regex)
     #[arg(long, short, default_value_t = DEFAULT_ENV_REGEX.to_string(), value_parser=CliConfig::parse_env_mask)]
     env_mask: String,
+
+    /// Enable health check responder on the specified port
+    #[arg(long, value_parser=CliConfig::parse_health_check_port)]
+    pub health_check_port: Option<u16>,
 }
 
 impl CliConfig {
@@ -75,6 +79,23 @@ impl CliConfig {
         }
     }
 
+    /// Parse port number string into u16 and validate range
+    fn parse_health_check_port(port: &str) -> Result<u16, String> {
+        match port.parse::<u16>() {
+            Ok(port) => {
+                if port > 0 {
+                    Ok(port)
+                } else {
+                    Err("health check port number should be in range 1..65535".into())
+                }
+            }
+            Err(e) => Err(format!(
+                "unable to parse `{port}`: {}, it should be number in range 1..65535",
+                e
+            )),
+        }
+    }
+
     /// Getter for config path
     pub fn config_path(&self) -> String {
         self.config.to_string()
@@ -118,5 +139,24 @@ mod tests {
         assert_ron_snapshot!(CliConfig::parse_env_mask("  \\1   "));
         assert_ron_snapshot!(CliConfig::parse_env_mask("[1"));
         assert_ron_snapshot!(CliConfig::parse_env_mask("**"));
+    }
+
+    #[test]
+    fn parse_good_health_check_port() {
+        assert_eq!(CliConfig::parse_health_check_port("123"), Ok(123));
+        assert_eq!(CliConfig::parse_health_check_port("65535"), Ok(65535));
+    }
+
+    #[test]
+    fn parse_wrong_health_check_port() {
+        assert_eq!(
+            CliConfig::parse_health_check_port("0"),
+            Err("health check port number should be in range 1..65535".into())
+        );
+        assert_eq!(
+            CliConfig::parse_health_check_port("65536"),
+            Err("unable to parse `65536`: number too large to fit in target type, it should be number in range 1..65535".into())
+        );
+        assert_eq!(CliConfig::parse_health_check_port("qwerty"), Err("unable to parse `qwerty`: invalid digit found in string, it should be number in range 1..65535".into()));
     }
 }
