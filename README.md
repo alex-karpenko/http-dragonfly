@@ -92,8 +92,8 @@ service:
 
 config:
   listeners:
-    - name: test-google
-      on: "*:8000"
+    - id: test-google
+      listen_on: "*:8000"
       timeout: 5s
       methods:
       - GET
@@ -126,7 +126,7 @@ target/release/http-dragonfly --config ./config.yaml -v
 
 Configuration file is `yaml` file with list on `listeners` at root.
 
-### THIS IS DRAFT EXAMPLE FILE! DON'T USE IT! THIS SECTION WILL WE WRITTEN LATER!
+### THIS IS DRAFT EXAMPLE FILE! DON'T USE IT! THIS SECTION WILL BE WRITTEN LATER!
 
 #### Detailed configuration with explanation
 
@@ -135,8 +135,8 @@ Below is a detailed explanation of all possible configuration parameters. Defaul
 
 ```yaml
 listeners:
-  - name: Listener-8080 # default is LISTENER-<on value>
-    on: "*:8080" # or ip:port like 1.2.3.4:1234, or just port number
+  - id: Listener-8080 # default is LISTENER-<on value>
+    listen_on: "*:8080" # or ip:port like 1.2.3.4:1234, or just port number
     timeout: 10s
     methods: # default - empty list that means "any method"
       - GET
@@ -204,8 +204,8 @@ listeners:
           - add: X-Http-Splitter-Response-Source
             value: ${CTX_TARGET_ID}
 
-  - name: Condition-plus-target_id-8081
-    on: "*:8081"
+  - id: Condition-plus-target_id-8081
+    listen_on: "*:8081"
     timeout: 30s
     strategy: always_target_id
     methods:
@@ -236,8 +236,8 @@ listeners:
           - add: X-Http-Conditional-Response-Source
             value: ${CTX_TARGET_ID}
 
-  - name: Router-8082
-    on: "*:8082"
+  - id: Router-8082
+    listen_on: "*:8082"
     timeout: 30s
     strategy: conditional_routing
     methods:

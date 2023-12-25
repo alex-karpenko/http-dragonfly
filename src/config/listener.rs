@@ -29,7 +29,7 @@ const INVALID_IP_ADDRESS_ERROR: &str = "IP address isn't valid";
 #[serde(deny_unknown_fields)]
 pub struct ListenerConfig {
     id: Option<String>,
-    #[serde(rename = "on", default)]
+    #[serde(default)]
     listen_on: ListenOn,
     #[serde(
         with = "humantime_serde",
