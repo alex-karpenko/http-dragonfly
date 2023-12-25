@@ -2,4 +2,7 @@
 .vscode
 
 config*.yaml
+!config.yaml
+
+values*.yaml
 TODO*
