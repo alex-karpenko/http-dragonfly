@@ -1,6 +1,6 @@
 listeners:
   - id: Listener-1
-    on: "8.8.8.8:4321"
+    listen_on: "8.8.8.8:4321"
     timeout: 30s
     methods:
       - GET

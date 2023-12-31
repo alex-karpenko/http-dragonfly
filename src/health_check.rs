@@ -8,7 +8,7 @@ use std::{
     net::{Ipv4Addr, SocketAddr},
     time::Duration,
 };
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{shutdown_signal, PinnedBoxedServerFuture};
 
@@ -22,6 +22,8 @@ async fn handle(addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
 
 /// Health check handler builder
 pub fn new(port: u16, timeout_sec: u64) -> PinnedBoxedServerFuture {
+    info!("Creating health check handler on *:{}", port);
+
     let ip = Ipv4Addr::new(0, 0, 0, 0);
     let socket = SocketAddr::new(ip.into(), port);
     let server = Server::bind(&socket);

@@ -6,7 +6,7 @@ keywords = ["http", "splitter", "relay", "router"]
 license = "MIT OR Apache-2.0"
 name = "http-dragonfly"
 repository = "https://github.com/alex-karpenko/http-dragonfly"
-version = "0.1.0"
+version = "0.1.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
