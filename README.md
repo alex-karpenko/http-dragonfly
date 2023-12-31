@@ -14,7 +14,23 @@ This is a tiny service app to redirect, split or relay HTTP calls to one or more
 
 ## Some typical use cases
 
-TBW
+Actually use cases are restricted by your fantasy only :)
+
+**Debugging**:
+
+- duplicate all queries from production environment to one or more test environments to evaluate new functionality with real production requests and workload
+- duplicate specific conditionally selected queries to other target to analyze some issues dependent on content
+- send web-hooks to several (test) environments simultaneously
+
+**Logging/observing/learning**:
+
+- duplicate queries to different log storages without affecting of normal request flow: i.e. log body to ElasticSearch, source IPs and user agent to some simple logger
+- duplicate some conditionally selected queries (for example based on source IP or query string) to special endpoint to alert about abuse or intrusion attempt
+- stream all (or selected) requests to machine learning system without affecting normal processing
+
+**Routing**:
+
+- route request to specific target based on query content
 
 ## Usage
 
@@ -347,15 +363,15 @@ Obviously this parameter defines some conditional expression (predicate) which s
     - `path`: path
     - `query`: query string of URI
 
-Special case of condition expression (and actually default value) is word `default` instead of predicate, that means this condition is true and target have to be queried anyway. This condition expression should be use with `conditional_routing` strategy to mark target which will be queried in case if all other conditions are false. If strategy is `conditional_routing` there can be only one target with `default` condition.
+Special case of condition expression (and actually default value) is word `default` instead of predicate, that means this condition is true and target have to be queried anyway. This condition expression should be used with `conditional_routing` strategy to mark target which will be queried in case if all other conditions are false. If strategy is `conditional_routing` there can be only one target with `default` condition.
 
 Some additional explanation:
 
 - if strategy is any except `conditional_routing`:
   - condition is empty (absent) or `default` - target will be queried anyway
   - condition is defined as `jq` expression - target will be queried in case of expression evaluates to `true` only
-- if strategy `conditional_routing`:
-  - only one condition is true - it will be queried
+- if strategy is `conditional_routing`:
+  - only one condition is true - this target will be queried
   - all conditions are false and there is one target with `default` condition - this default will be queried
   - all conditions are false and there is no targets with `default` condition - error will be propagated
   - more than one condition is true - error will be propagated
@@ -367,7 +383,7 @@ Condition examples:
 - `.env["CTX_REQUEST_HOST"] == "www.google.com"`
 - `.request.headers["HTTP_ENV_AUTH_TOKEN"] != ""`
 - `.body.some.body.int.value == 5`
-- `'.body.data.products[]|length > 0'`
+- `.body.data.products[]|length > 0`
 - `default`
 
 ##### Listener: `target` config examples
@@ -550,11 +566,11 @@ listeners:
     strategy: conditional_routing
     targets:
       - id: Target-0
-        condition: .body.target == "0" && .env["CTX_REQUEST_METHOD"] != "POST"
+        condition: .body.target == "0" and .env["CTX_REQUEST_METHOD"] != "POST"
         url: https://qqq.www.com/
         timeout: 60s
       - id: Target-1
-        condition: .headers["Qqq"] == "WWW" && .env["CTX_REQUEST_METHOD"] != "POST"
+        condition: .headers["Qqq"] == "WWW" and .env["CTX_REQUEST_METHOD"] != "POST"
         url: https://qqq.www.com/${CTX_REQUEST_PATH}
       - id: Target-2
         condition: .env["CTX_REQUEST_METHOD"] == "POST"
