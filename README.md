@@ -64,7 +64,7 @@ Options:
           Path to config file
   -e, --env-mask <ENV_MASK>
           Allowed environment variables mask (regex) [default: ^HTTP_ENV_[a-zA-Z0-9_]+$]
-      --health-check-port <HEALTH_CHECK_PORT>
+  -p, --health-check-port <HEALTH_CHECK_PORT>
           Enable health check responder on the specified port
   -h, --help
           Print help
@@ -144,7 +144,7 @@ target/release/http-dragonfly --config ./config.yaml -v
 
 Configuration is a `yaml` file with a list of `listeners` as a root element.
 
-### What is a Listener
+### Listener
 
 Each listener has a handler which listens on specific IP and port and do the following:
 
@@ -320,9 +320,9 @@ headers:
 ```
 
 ***Important note***:
-> if you strictly need to set header to some specific value regardless of header's presence you should add two consecutive actions - `add` and `update` with the same `value`, order doesn't matter: if you try to update non-existent header - new one won't appear, if you try to add existing header - value won't be changed.
 
-If you need to guarantee some stable set of headers instead of requested, just drop all headers (`drop: "*"`) as first action and add all needed ones as following actions.
+> - if you strictly need to set header to some specific value regardless of header's presence you should add two consecutive actions - `add` and `update` with the same `value`, order doesn't matter: if you try to update non-existent header - new one won't appear, if you try to add existing header - value won't be changed.
+> - if you need to guarantee some stable set of headers instead of requested, just drop all headers (`drop: "*"`) as first action and add all needed ones as following actions.
 
 #### Listener: `targets`
 
@@ -417,13 +417,18 @@ listeners:
 - strategy: conditional_routing
   targets:
   - url: https://www.example.com/path-1
+    condition: .body.data.value == 1
     id: query-1
     body: |
       {
         "query": "${CTX_REQUEST_QUERY:-}",
         "path": "${CTX_REQUEST_PATH:-}"
       }
-    condition: .body.data.value == 1
+    headers:
+    - drop: content-length
+    - drop: content-type
+    - add: content-type
+      value: application/json
   - url: https://www.example.com/path-2
     id: query-2
     condition: .body.data.value == 2
@@ -440,6 +445,10 @@ listeners:
     - drop: Authorization
     condition: default
 ```
+
+***Important notes***:
+
+> - if you change request body don't forget to drop `content-length` header and add/update `content-type` header, otherwise request handler will panic due to request inconsistency.
 
 #### Listener: `response`
 
@@ -466,9 +475,10 @@ Response override config intended to provide custom (overridden) response parts 
 - `headers`: defines headers transformations similar to [this](#listener-headers)
 - `status`: set particular response status instead of original value
 
-***Important note:***
-> Default behavior of those overrides is to pass original content of body and headers and status. But for all `*_override` strategies defaults is empty body, empty headers and status 200. So if you need to create exactly new response instead of the one obtained from some target, you can (or have to) define those overrides. If you omit this config than `*_override` strategy returns empty response with 200 status.
+***Important notes:***
 
+> - default behavior of those overrides is to pass original content of body and headers and status. But for all `*_override` strategies defaults is empty body, empty headers and status 200. So if you need to create exactly new response instead of the one obtained from some target, you can (or have to) define those overrides. If you omit this config than `*_override` strategy returns empty response with 200 status.
+> - if you change response body don't forget to drop `content-length` header and add/update `content-type` header, otherwise request handler will panic due to response inconsistency.
 
 ### Huge configuration example
 
@@ -500,6 +510,11 @@ listeners:
         url: https://qqq.www.com/
         timeout: 60s
         body: '{"method": "${CTX_REQUEST_METHOD}"}'
+        headers:
+          - drop: content-length
+          - drop: content-type
+          - add: content-type
+            value: application/json
         on_error: status
         error_status: 555
       - id: Target-1
@@ -525,7 +540,9 @@ listeners:
         body: |
           {"status": "ok"}
         headers: # default is to preserve original headers or empty if strategy is one of *_override
-          - update: content-type
+          - drop: content-length
+          - drop: content-type
+          - add: content-type
             value: application/json
           - add: X-Http-Dragonfly-Version
             value: ${CTX_APP_VERSION}

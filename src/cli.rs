@@ -29,7 +29,7 @@ pub struct CliConfig {
     env_mask: String,
 
     /// Enable health check responder on the specified port
-    #[arg(long, value_parser=CliConfig::parse_health_check_port)]
+    #[arg(long, short = 'p', value_parser=CliConfig::parse_health_check_port)]
     pub health_check_port: Option<u16>,
 }
 
