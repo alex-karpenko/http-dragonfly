@@ -8,28 +8,29 @@ mod health_check;
 use cli::CliConfig;
 use config::AppConfig;
 use context::{Context, RootOsEnvironment};
-use futures_util::{future::join_all, Future};
+use futures_util::future::join_all;
 use handler::RequestHandler;
 use hyper::{
     server::conn::AddrStream,
     service::{make_service_fn, service_fn},
     Server,
 };
-use std::{convert::Infallible, error::Error, pin::Pin, sync::Arc};
+use std::{convert::Infallible, error::Error, sync::Arc};
 use tokio::{
     select,
     signal::unix::{signal, SignalKind},
+    task::JoinHandle,
 };
 use tracing::info;
 
-type PinnedBoxedServerFuture = Pin<Box<dyn Future<Output = Result<(), hyper::Error>>>>;
+type HyperTaskJoinHandle = JoinHandle<Result<(), hyper::Error>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let cli_config = CliConfig::new();
     let root_ctx = Arc::new(Context::root(RootOsEnvironment::new(cli_config.env_mask())));
     let app_config = AppConfig::new(&cli_config.config_path(), *root_ctx)?;
-    let mut servers: Vec<PinnedBoxedServerFuture> = vec![];
+    let mut servers: Vec<HyperTaskJoinHandle> = vec![];
 
     for cfg in app_config.listeners().iter().map(Arc::new) {
         let server = Server::bind(&cfg.socket());
@@ -51,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .serve(make_service)
             .with_graceful_shutdown(shutdown_signal(name));
 
-        servers.push(Box::pin(server));
+        servers.push(tokio::spawn(server));
     }
 
     // Setup health check responder

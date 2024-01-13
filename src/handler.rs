@@ -202,13 +202,15 @@ impl RequestHandler {
             let https_connector = HttpsConnector::new_with_connector(http_connector);
             let http_client = Client::builder().build(https_connector);
 
-            target_requests.push(http_client.request(target_request));
+            target_requests.push(tokio::spawn(http_client.request(target_request)));
             target_ctx.push(ctx);
             target_ids.push(target.id());
         }
 
         // Get results
-        let results: Vec<Result<Response<Body>, HyperError>> = join_all(target_requests).await;
+        let results = join_all(target_requests).await;
+        let results: Vec<Result<Response<Body>, HyperError>> =
+            results.into_iter().map(|r| r.unwrap()).collect();
         // Pre-process results
         let mut responses: ResponsesMap = ResponsesMap::new();
         for (pos, res) in results.into_iter().enumerate() {
