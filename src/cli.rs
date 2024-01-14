@@ -107,6 +107,12 @@ impl CliConfig {
     }
 }
 
+impl Default for CliConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use insta::assert_ron_snapshot;
