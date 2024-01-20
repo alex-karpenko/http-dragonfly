@@ -1,0 +1,70 @@
+# Requires echo server on port 3000
+
+# failed_then_ok
+# failed_then_target_id
+# failed_then_override
+# ok_then_failed
+# ok_then_target_id
+# ok_then_override
+# always_target_id
+# always_override
+# conditional_routing
+
+listeners:
+  # Basic forwarding
+  - id: basic-forwarding-8000
+    listen_on: "*:8000"
+    strategy: failed_then_ok
+    targets:
+    - url: http://localhost:3000/${CTX_REQUEST_HEADERS_X_DELAY}
+      timeout: 1s
+      body: "GOOD"
+      headers:
+        - drop: content-length
+        - add: X-Path
+          value: ${CTX_REQUEST_PATH}
+
+  # One invalid target, failed first
+  - id: invalid-target-8001
+    listen_on: "*:8001"
+    strategy: failed_then_ok
+    targets:
+    - id: "GOOD"
+      url: http://localhost:3000/
+    - id: "WRONG"
+      url: http://localhost:65535/
+    response:
+      override:
+        body: ${CTX_TARGET_ID}
+        headers:
+        - drop: content-length
+
+  # One invalid target, ok first
+  - id: invalid-target-8002
+    listen_on: "*:8002"
+    strategy: ok_then_failed
+    targets:
+    - id: "GOOD"
+      url: http://localhost:3000/
+    - id: "WRONG"
+      url: http://localhost:65535/
+    response:
+      override:
+        body: ${CTX_TARGET_ID}
+        headers:
+        - drop: content-length
+
+  # One invalid target, specific third target
+  - id: invalid-target-8003
+    listen_on: "*:8003"
+    strategy: ok_then_failed
+    targets:
+    - id: "GOOD"
+      url: http://localhost:3000/
+    - id: "WRONG"
+      url: http://localhost:65535/
+    response:
+      override:
+        body: ${CTX_TARGET_ID}
+        headers:
+        - drop: content-length

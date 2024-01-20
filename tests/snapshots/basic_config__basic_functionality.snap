@@ -1,0 +1,7 @@
+---
+source: tests/basic_config.rs
+expression: "client.get(\"http://localhost:8000/5\").send().await.unwrap().text().await"
+---
+Ok(
+    "GOOD",
+)
