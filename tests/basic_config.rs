@@ -20,6 +20,18 @@ async fn basic_functionality() {
             200,
             "simple request to 8000, 200 expected"
         );
+        // Request with timeout
+        assert_eq!(
+            client
+                .get("http://localhost:8000/")
+                .header("X-Delay", "2")
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            504,
+            "request to 8000 with timeout, 504 is expected"
+        );
         assert_debug_snapshot!(
             client
                 .get("http://localhost:8000/5")
@@ -71,21 +83,6 @@ async fn basic_functionality() {
                 .text()
                 .await
         );
-
-        // Request with timeout
-        assert_eq!(
-            client
-                .get("http://localhost:8000/")
-                .header("X-Delay", "2")
-                .send()
-                .await
-                .unwrap()
-                .status(),
-            504,
-            "request to 8000 with timeout, 504 is expected"
-        );
-
-        //
     })
     .await;
 

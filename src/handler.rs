@@ -198,8 +198,7 @@ impl RequestHandler {
 
             // Make a connector
             let mut http_connector = HttpConnector::new();
-            // comment this since it works on connect phase only, bu we need both: connect and request
-            //http_connector.set_connect_timeout(Some(target.timeout()));
+            http_connector.set_connect_timeout(Some(target.timeout()));
             http_connector.enforce_http(false);
             let http_connector = HttpsConnector::new_with_connector(http_connector);
             let http_client = Client::builder().build(http_connector);
