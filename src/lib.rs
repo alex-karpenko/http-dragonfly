@@ -27,7 +27,7 @@ use tracing::info;
 pub type HyperTaskJoinHandle = JoinHandle<Result<(), hyper::Error>>;
 
 pub async fn run(
-    cli_config: &CliConfig,
+    cli_config: CliConfig,
     env_provider: impl RootEnvironment,
 ) -> Result<(), Box<dyn Error>> {
     let root_ctx = Arc::new(Context::root(env_provider));

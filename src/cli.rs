@@ -44,6 +44,13 @@ impl CliConfig {
         config
     }
 
+    pub fn from_config_path(config: String) -> CliConfig {
+        Self {
+            config,
+            ..Self::default()
+        }
+    }
+
     /// Creates global logger and set requested log level and format
     fn setup_logger(&self) {
         let level_filter = if self.debug {
@@ -109,7 +116,14 @@ impl CliConfig {
 
 impl Default for CliConfig {
     fn default() -> Self {
-        Self::new()
+        Self {
+            debug: false,
+            verbose: false,
+            json_log: false,
+            config: "".to_owned(),
+            env_mask: DEFAULT_ENV_REGEX.to_owned(),
+            health_check_port: None,
+        }
     }
 }
 

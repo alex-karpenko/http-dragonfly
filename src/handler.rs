@@ -7,6 +7,7 @@ use hyper::{
 use hyper_tls::HttpsConnector;
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
+use tokio::time::error::Elapsed;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -197,37 +198,43 @@ impl RequestHandler {
 
             // Make a connector
             let mut http_connector = HttpConnector::new();
-            http_connector.set_connect_timeout(Some(target.timeout()));
+            // comment this since it works on connect phase only, bu we need both: connect and request
+            //http_connector.set_connect_timeout(Some(target.timeout()));
             http_connector.enforce_http(false);
-            let https_connector = HttpsConnector::new_with_connector(http_connector);
-            let http_client = Client::builder().build(https_connector);
+            let http_connector = HttpsConnector::new_with_connector(http_connector);
+            let http_client = Client::builder().build(http_connector);
+            let http_request = http_client.request(target_request);
+            let http_request = tokio::time::timeout(target.timeout(), http_request);
 
-            target_requests.push(tokio::spawn(http_client.request(target_request)));
+            target_requests.push(tokio::spawn(http_request));
             target_ctx.push(ctx);
             target_ids.push(target.id());
         }
 
         // Get results
         let results = join_all(target_requests).await;
-        let results: Vec<Result<Response<Body>, HyperError>> =
-            results.into_iter().map(|r| r.unwrap()).collect();
+        let results: Vec<ResponseResult> = results
+            .into_iter()
+            .map(|r| r.unwrap())
+            .map(ResponseResult::from)
+            .collect();
         // Pre-process results
         let mut responses: ResponsesMap = ResponsesMap::new();
         for (pos, res) in results.into_iter().enumerate() {
             match res {
-                Ok(resp) => {
+                ResponseResult::Ok(resp) => {
                     debug!("OK response: {:#?}", resp);
                     responses.insert(target_ids[pos].clone(), (Some(resp), &target_ctx[pos]));
                 }
-                Err(e) => {
-                    debug!("ERR response: {:#?}", e);
+                ResponseResult::HyperError(_) | ResponseResult::Timeout => {
+                    debug!("ERR response: {:#?}", res);
                     let target = targets[pos];
                     let resp = match target.on_error() {
                         TargetOnErrorAction::Propagate => {
-                            Some(response_cfg.error_response(e, &None))
+                            Some(response_cfg.error_response(res, &None))
                         }
                         TargetOnErrorAction::Status => {
-                            Some(response_cfg.error_response(e, &target.error_status()))
+                            Some(response_cfg.error_response(res, &target.error_status()))
                         }
                         TargetOnErrorAction::Drop => None,
                     };
@@ -287,5 +294,24 @@ impl RequestHandler {
         debug!("Final response: {:?}", resp);
         info!("{req_id}: completed, status={}", resp.status().as_u16());
         Ok(resp)
+    }
+}
+
+#[derive(Debug)]
+pub enum ResponseResult {
+    Ok(Response<Body>),
+    HyperError(HyperError),
+    Timeout,
+}
+
+impl From<Result<Result<Response<Body>, HyperError>, Elapsed>> for ResponseResult {
+    fn from(r: Result<Result<Response<Body>, HyperError>, Elapsed>) -> Self {
+        match r {
+            Err(_ee) => Self::Timeout,
+            Ok(r) => match r {
+                Ok(r) => Self::Ok(r),
+                Err(he) => Self::HyperError(he),
+            },
+        }
     }
 }

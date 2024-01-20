@@ -1,10 +1,13 @@
-use hyper::{header::CONTENT_LENGTH, http::Error, Body, Error as HyperError, Response, StatusCode};
+use hyper::{header::CONTENT_LENGTH, http::Error, Body, Response, StatusCode};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
 
-use crate::{context::Context, handler::ResponsesMap};
+use crate::{
+    context::Context,
+    handler::{ResponseResult, ResponsesMap},
+};
 
 use super::{
     headers::{HeaderTransform, HeadersTransformator},
@@ -56,7 +59,7 @@ pub trait ResponseBehavior {
         responses: &ResponsesMap,
         response_kind: ResponseKind,
     ) -> Option<String>;
-    fn error_response(&self, e: HyperError, status: &Option<ResponseStatus>) -> Response<Body>;
+    fn error_response(&self, e: ResponseResult, status: &Option<ResponseStatus>) -> Response<Body>;
     fn empty_response(&self, status: ResponseStatus) -> Result<Response<Body>, Error>;
     fn override_empty_response(
         &'static self,
@@ -168,16 +171,26 @@ impl ResponseBehavior for ResponseConfig {
         None
     }
 
-    fn error_response(&self, e: HyperError, status: &Option<ResponseStatus>) -> Response<Body> {
+    fn error_response(&self, e: ResponseResult, status: &Option<ResponseStatus>) -> Response<Body> {
         let resp = Response::builder();
         let resp = if let Some(status) = status.to_owned() {
             resp.status(status)
-        } else if e.is_connect() || e.is_closed() {
-            resp.status(StatusCode::BAD_GATEWAY)
-        } else if e.is_timeout() {
-            resp.status(StatusCode::GATEWAY_TIMEOUT)
         } else {
-            resp.status(StatusCode::INTERNAL_SERVER_ERROR)
+            match e {
+                ResponseResult::HyperError(e) => {
+                    if e.is_connect() || e.is_closed() {
+                        resp.status(StatusCode::BAD_GATEWAY)
+                    } else if e.is_timeout() {
+                        resp.status(StatusCode::GATEWAY_TIMEOUT)
+                    } else {
+                        resp.status(StatusCode::INTERNAL_SERVER_ERROR)
+                    }
+                }
+                ResponseResult::Timeout => resp.status(StatusCode::GATEWAY_TIMEOUT),
+                _ => {
+                    panic!("Looks like a BUG!")
+                }
+            }
         };
 
         resp.body(Body::empty()).unwrap()
