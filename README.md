@@ -356,7 +356,7 @@ Obviously this parameter defines some conditional expression (predicate) which s
 - `body`: JSON body on original request (before body processing if `target.body` is defined)
 - `env`: target request context - list of name/value pairs of environment variables (before applying target's context)
 - `request`: complex object with original request's attributes (before applying of any target's transformation)
-  - `headers`: list of name/value pairs with request headers
+  - `headers`: list of name/value pairs with request headers (***headers names are in lower case***)
   - `uri`: complex object
     - `full`: full URI staring
     - `host`: host part of URI
@@ -381,7 +381,7 @@ In other words `conditional_routing` ensure querying of single target only which
 Condition examples:
 
 - `.env["CTX_REQUEST_HOST"] == "www.google.com"`
-- `.request.headers["HTTP_ENV_AUTH_TOKEN"] != ""`
+- `.request.headers["x-auth-token"] != ""`
 - `.body.some.body.int.value == 5`
 - `.body.data.products[]|length > 0`
 - `default`
@@ -406,7 +406,7 @@ listeners:
 - targets:
   - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
     id: query
-    condition: .request.headers["X-Route-To-Query"] == "true"
+    condition: .request.headers["x-route-to-query"] == "true"
   - url: http://query-logger:9090/
 ```
 
@@ -562,7 +562,7 @@ listeners:
         url: https://qqq.www.com/
         timeout: 60s
       - id: Target-1
-        condition: .headers["Qqq"] == "WWW"
+        condition: .headers["qqq"] == "WWW"
         url: https://qqq.www.com/${CTX_REQUEST_PATH}
       - id: Target-2
         condition: default
@@ -587,7 +587,7 @@ listeners:
         url: https://qqq.www.com/
         timeout: 60s
       - id: Target-1
-        condition: .headers["Qqq"] == "WWW" and .env["CTX_REQUEST_METHOD"] != "POST"
+        condition: .headers["qqq"] == "WWW" and .env["CTX_REQUEST_METHOD"] != "POST"
         url: https://qqq.www.com/${CTX_REQUEST_PATH}
       - id: Target-2
         condition: .env["CTX_REQUEST_METHOD"] == "POST"
