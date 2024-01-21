@@ -24,47 +24,74 @@ listeners:
         - add: X-Path
           value: ${CTX_REQUEST_PATH}
 
-  # One invalid target, failed first
+  # Failed first, ok
   - id: invalid-target-8001
     listen_on: "*:8001"
     strategy: failed_then_ok
     targets:
     - id: "GOOD"
       url: http://localhost:3000/
+      body: GOOD
     - id: "WRONG"
       url: http://localhost:65535/
+      body: WRONG
+      condition: .request.headers["x-skip-wrong"] != "yes"
+    - id: "TIMEOUT"
+      timeout: 1s
+      url: http://localhost:3000/2
+      body: TIMEOUT
+      condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
-        body: ${CTX_TARGET_ID}
         headers:
-        - drop: content-length
+        - add: x-target-id
+          value: ${CTX_TARGET_ID}
 
-  # One invalid target, ok first
+  # Failed first, target id
   - id: invalid-target-8002
     listen_on: "*:8002"
-    strategy: ok_then_failed
+    strategy: failed_then_target_id
     targets:
     - id: "GOOD"
       url: http://localhost:3000/
+      body: GOOD
     - id: "WRONG"
       url: http://localhost:65535/
+      body: WRONG
+      condition: .request.headers["x-skip-wrong"] != "yes"
+    - id: "TIMEOUT"
+      timeout: 1s
+      url: http://localhost:3000/2
+      body: TIMEOUT
+      condition: .request.headers["x-include-timeout"] == "yes"
     response:
+      target_selector: GOOD
       override:
-        body: ${CTX_TARGET_ID}
         headers:
-        - drop: content-length
+        - add: x-target-id
+          value: ${CTX_TARGET_ID}
 
-  # One invalid target, specific third target
+  # Failed first, override
   - id: invalid-target-8003
     listen_on: "*:8003"
-    strategy: ok_then_failed
+    strategy: failed_then_override
+    headers:
+      - drop: content-length
     targets:
     - id: "GOOD"
       url: http://localhost:3000/
+      body: GOOD
     - id: "WRONG"
       url: http://localhost:65535/
+      body: WRONG
+      condition: .request.headers["x-skip-wrong"] != "yes"
+    - id: "TIMEOUT"
+      timeout: 1s
+      url: http://localhost:3000/2
+      body: TIMEOUT
+      condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
-        body: ${CTX_TARGET_ID}
         headers:
-        - drop: content-length
+        - add: x-target-id
+          value: ${CTX_TARGET_ID}

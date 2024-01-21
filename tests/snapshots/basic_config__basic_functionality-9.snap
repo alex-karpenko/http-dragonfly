@@ -3,5 +3,5 @@ source: tests/basic_config.rs
 expression: "good.headers().get(\"x-target-id\")"
 ---
 Some(
-    "GOOD",
+    "${CTX_TARGET_ID}",
 )
