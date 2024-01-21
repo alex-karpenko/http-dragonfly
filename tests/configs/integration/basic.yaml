@@ -267,6 +267,12 @@ listeners:
       condition: .request.headers["x-include-timeout"] == "yes"
       on_error: status
       error_status: 555
+    - id: wrong_port_with_dropped_status
+      timeout: 1s
+      url: http://localhost:65535/
+      body: "wrong_port_with_dropped_status"
+      condition: .request.headers["x-include-wrong-port"] == "yes"
+      on_error: drop
     - id: default
       url: http://localhost:3000/
       body: default

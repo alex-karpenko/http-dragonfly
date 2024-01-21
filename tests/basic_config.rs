@@ -246,6 +246,14 @@ fn prepare_test_cases() -> Vec<TestConfig> {
             expected_x_target_id_header: Some("timeout_with_555_status"),
             ..TestConfig::default()
         },
+        TestConfig {
+            description: "target_status_override",
+            port: 8010,
+            include_wrong_port: true,
+            expected_status: 500,
+            expected_x_target_id_header: Some("wrong_port_with_dropped_status"),
+            ..TestConfig::default()
+        },
     ]
 }
 
