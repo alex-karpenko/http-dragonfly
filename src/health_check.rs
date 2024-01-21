@@ -10,7 +10,7 @@ use std::{
 };
 use tracing::{debug, info};
 
-use crate::{shutdown_signal, PinnedBoxedServerFuture};
+use crate::{shutdown_signal, HyperTaskJoinHandle};
 
 /// Health check handler
 ///
@@ -21,7 +21,7 @@ async fn handle(addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
 }
 
 /// Health check handler builder
-pub fn new(port: u16, timeout_sec: u64) -> PinnedBoxedServerFuture {
+pub fn new(port: u16, timeout_sec: u64) -> HyperTaskJoinHandle {
     info!("Creating health check handler on *:{}", port);
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
@@ -40,5 +40,5 @@ pub fn new(port: u16, timeout_sec: u64) -> PinnedBoxedServerFuture {
         .serve(make_service)
         .with_graceful_shutdown(shutdown_signal("Health check handler".into()));
 
-    Box::pin(server)
+    tokio::spawn(server)
 }

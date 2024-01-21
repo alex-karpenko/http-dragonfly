@@ -29,7 +29,7 @@ pub struct CliConfig {
     env_mask: String,
 
     /// Enable health check responder on the specified port
-    #[arg(long, value_parser=CliConfig::parse_health_check_port)]
+    #[arg(long, short = 'p', value_parser=CliConfig::parse_health_check_port)]
     pub health_check_port: Option<u16>,
 }
 
@@ -42,6 +42,13 @@ impl CliConfig {
         debug!("CLI config: {:#?}", config);
 
         config
+    }
+
+    pub fn from_config_path(config: String) -> CliConfig {
+        Self {
+            config,
+            ..Self::default()
+        }
     }
 
     /// Creates global logger and set requested log level and format
@@ -104,6 +111,19 @@ impl CliConfig {
     /// Getter for environment variables mask
     pub fn env_mask(&self) -> &str {
         self.env_mask.as_ref()
+    }
+}
+
+impl Default for CliConfig {
+    fn default() -> Self {
+        Self {
+            debug: false,
+            verbose: false,
+            json_log: false,
+            config: "".to_owned(),
+            env_mask: DEFAULT_ENV_REGEX.to_owned(),
+            health_check_port: None,
+        }
     }
 }
 
