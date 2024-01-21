@@ -11,8 +11,6 @@ pub async fn run_test_with_config(
     timeout_sec: u64,
     test: impl Future,
 ) -> Result<(), String> {
-    tracing_subscriber::fmt::init();
-
     let echo_server = echo_server(echo_port);
     let cli_config = CliConfig::from_config_path(config_path.into());
     let env_provider = RootOsEnvironment::new("^TEST_HTTP_ENV_[A-Z0-9]+$");

@@ -1,7 +1,0 @@
----
-source: tests/basic_config.rs
-expression: "timeout.headers().get(\"x-target-id\")"
----
-Some(
-    "TIMEOUT",
-)
