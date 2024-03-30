@@ -2,8 +2,7 @@ mod common;
 
 use crate::common::run_test_with_config;
 use futures_util::future::join_all;
-use hyper::header::HeaderValue;
-use reqwest::Client;
+use reqwest::{header::HeaderValue, Client};
 
 const TEST_CONFIG_PATH: &str = "tests/configs/integration/basic.yaml";
 

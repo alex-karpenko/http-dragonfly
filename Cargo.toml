@@ -6,13 +6,13 @@ keywords = ["http", "splitter", "relay", "router"]
 license = "MIT OR Apache-2.0"
 name = "http-dragonfly"
 repository = "https://github.com/alex-karpenko/http-dragonfly"
-version = "0.2.1"
+version = "0.2.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 clap = {version = "4", features = ["derive"]}
-futures-util = "0.3.28"
+futures-util = "0.3.30"
 humantime-serde = "1"
 hyper = {version = "0.14.27", features = ["client", "server", "http1", "runtime"]}
 hyper-tls = "0.5.0"
@@ -24,14 +24,14 @@ serde = {version = "1", features = ["derive"]}
 serde_json = "1"
 serde_yaml = "0.9.27"
 shellexpand = {version = "3", default-features = false, features = ["base-0"]}
-strum = {version = "0.26.1", features = ["derive"]}
-strum_macros = "0.26.1"
+strum = {version = "0.26.2", features = ["derive"]}
+strum_macros = "0.26.2"
 thiserror = "1"
 tokio = {version = "1", features = ["macros", "signal", "tracing", "rt-multi-thread"]}
-tracing = "0.1.37"
-tracing-subscriber = {version = "0.3.17", features = ["env-filter", "json"]}
+tracing = "0.1.40"
+tracing-subscriber = {version = "0.3.18", features = ["env-filter", "json"]}
 uuid = {version = "1", features = ["v4", "fast-rng"]}
 
 [dev-dependencies]
 insta = {version = "1", features = ["glob", "ron", "redactions", "filters"]}
-reqwest = "0.11.23"
+reqwest = "0.12.2"
