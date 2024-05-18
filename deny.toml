@@ -17,7 +17,6 @@ allow = [
 confidence-threshold = 0.93
 exceptions = [
     { allow = ["Unicode-DFS-2016"], name = "unicode-ident" },
-    { allow = ["BSD-3-Clause"], name = "encoding_rs" },
 ]
 
 [licenses.private]
