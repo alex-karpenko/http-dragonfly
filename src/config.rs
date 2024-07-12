@@ -91,7 +91,7 @@ mod test {
             "good/*.yaml",
             |path| assert_debug_snapshot!(AppConfig::from_file(
                 &String::from(path.to_str().unwrap()),
-                &ctx
+                ctx
             ))
         );
     }
@@ -106,7 +106,7 @@ mod test {
                 r#"unable to parse config: listeners\[0\]\.targets\[1\]\.condition: invalid config: found "/" but expected one of "(.+)" at line 9 column 18,"#,
                 r#"unable to parse config: listeners[0].targets[1].condition: invalid config: found "/" but expected one of "[LIST OF ALLOWED JQ STATEMENTS]" at line 9 column 18,"#
             )]},
-            {assert_debug_snapshot!(AppConfig::from_file(&String::from(path.to_str().unwrap()),&ctx));})
+            {assert_debug_snapshot!(AppConfig::from_file(&String::from(path.to_str().unwrap()),ctx));})
         );
     }
 }

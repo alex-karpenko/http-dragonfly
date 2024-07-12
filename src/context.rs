@@ -233,7 +233,7 @@ pub mod test_context {
         }
     }
 
-    impl<'a> RootEnvironment for TestEnvironment {
+    impl RootEnvironment for TestEnvironment {
         fn get_environment(&self) -> ContextMap {
             self.map.clone()
         }
