@@ -281,11 +281,9 @@ async fn test_one_strategy(client: &Client, test_config: TestConfig) {
         test_config.include_good_target
     );
 
-    let target_id_header = if let Some(target_id) = test_config.expected_x_target_id_header {
-        Some(HeaderValue::from_str(target_id).unwrap())
-    } else {
-        None
-    };
+    let target_id_header = test_config
+        .expected_x_target_id_header
+        .map(|target_id| HeaderValue::from_str(target_id).unwrap());
 
     assert_eq!(
         resp.headers().get("x-target-id"),

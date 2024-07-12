@@ -87,116 +87,117 @@ Ok(
                                         Id(
                                             8,
                                         ),
-                                        [
-                                            Id,
-                                            ToString,
-                                            Object(
-                                                [],
-                                            ),
-                                            Path(
-                                                Id(
-                                                    2,
-                                                ),
+                                        Lut {
+                                            defs: [
+                                                Id,
+                                                ToString,
+                                                ObjEmpty,
                                                 Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Path(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Optional,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Call(
-                                                Call {
-                                                    id: Id(
-                                                        7,
+                                                    Id(
+                                                        2,
                                                     ),
-                                                    typ: Throw,
-                                                    skip: 0,
-                                                    args: [],
-                                                },
-                                            ),
-                                            Pipe(
-                                                Id(
-                                                    4,
-                                                ),
-                                                false,
-                                                Id(
-                                                    5,
-                                                ),
-                                            ),
-                                            Comma(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Id(
-                                                    6,
-                                                ),
-                                            ),
-                                            Ord(
-                                                Id(
-                                                    12,
-                                                ),
-                                                Eq,
-                                                Id(
-                                                    13,
-                                                ),
-                                            ),
-                                            Id,
-                                            Str(
-                                                "body",
-                                            ),
-                                            Str(
-                                                "target",
-                                            ),
-                                            Path(
-                                                Id(
-                                                    9,
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
                                                 ),
                                                 Path(
-                                                    [
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    10,
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
                                                                 ),
+                                                                Optional,
                                                             ),
-                                                            Essential,
-                                                        ),
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    11,
-                                                                ),
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
+                                                        ],
+                                                    ),
                                                 ),
-                                            ),
-                                            Str(
-                                                "1",
-                                            ),
-                                        ],
+                                                Call(
+                                                    Call {
+                                                        id: Id(
+                                                            7,
+                                                        ),
+                                                        typ: Throw,
+                                                        skip: 0,
+                                                        args: [],
+                                                    },
+                                                ),
+                                                Pipe(
+                                                    Id(
+                                                        4,
+                                                    ),
+                                                    false,
+                                                    Id(
+                                                        5,
+                                                    ),
+                                                ),
+                                                Comma(
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Id(
+                                                        6,
+                                                    ),
+                                                ),
+                                                Ord(
+                                                    Id(
+                                                        12,
+                                                    ),
+                                                    Eq,
+                                                    Id(
+                                                        13,
+                                                    ),
+                                                ),
+                                                Id,
+                                                Str(
+                                                    "body",
+                                                ),
+                                                Str(
+                                                    "target",
+                                                ),
+                                                Path(
+                                                    Id(
+                                                        9,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        10,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        11,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ),
+                                                Str(
+                                                    "1",
+                                                ),
+                                            ],
+                                            natives: [],
+                                        },
                                     ),
                                 },
                             ),
@@ -261,7 +262,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.2.5",
+                                            "0.2.6",
                                         ),
                                     },
                                     HeaderTransform {

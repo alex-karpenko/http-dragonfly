@@ -1,6 +1,6 @@
 ---
 source: src/config.rs
-expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), &ctx)"
 input_file: tests/configs/good/90-strategy-conditional_routing.yaml
 ---
 Ok(
@@ -48,116 +48,117 @@ Ok(
                                         Id(
                                             8,
                                         ),
-                                        [
-                                            Id,
-                                            ToString,
-                                            Object(
-                                                [],
-                                            ),
-                                            Path(
-                                                Id(
-                                                    2,
-                                                ),
+                                        Lut {
+                                            defs: [
+                                                Id,
+                                                ToString,
+                                                ObjEmpty,
                                                 Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Path(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Optional,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Call(
-                                                Call {
-                                                    id: Id(
-                                                        7,
+                                                    Id(
+                                                        2,
                                                     ),
-                                                    typ: Throw,
-                                                    skip: 0,
-                                                    args: [],
-                                                },
-                                            ),
-                                            Pipe(
-                                                Id(
-                                                    4,
-                                                ),
-                                                false,
-                                                Id(
-                                                    5,
-                                                ),
-                                            ),
-                                            Comma(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Id(
-                                                    6,
-                                                ),
-                                            ),
-                                            Ord(
-                                                Id(
-                                                    12,
-                                                ),
-                                                Eq,
-                                                Id(
-                                                    13,
-                                                ),
-                                            ),
-                                            Id,
-                                            Str(
-                                                "body",
-                                            ),
-                                            Str(
-                                                "field",
-                                            ),
-                                            Path(
-                                                Id(
-                                                    9,
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
                                                 ),
                                                 Path(
-                                                    [
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    10,
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
                                                                 ),
+                                                                Optional,
                                                             ),
-                                                            Essential,
-                                                        ),
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    11,
-                                                                ),
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
+                                                        ],
+                                                    ),
                                                 ),
-                                            ),
-                                            Int(
-                                                1,
-                                            ),
-                                        ],
+                                                Call(
+                                                    Call {
+                                                        id: Id(
+                                                            7,
+                                                        ),
+                                                        typ: Throw,
+                                                        skip: 0,
+                                                        args: [],
+                                                    },
+                                                ),
+                                                Pipe(
+                                                    Id(
+                                                        4,
+                                                    ),
+                                                    false,
+                                                    Id(
+                                                        5,
+                                                    ),
+                                                ),
+                                                Comma(
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Id(
+                                                        6,
+                                                    ),
+                                                ),
+                                                Ord(
+                                                    Id(
+                                                        12,
+                                                    ),
+                                                    Eq,
+                                                    Id(
+                                                        13,
+                                                    ),
+                                                ),
+                                                Id,
+                                                Str(
+                                                    "body",
+                                                ),
+                                                Str(
+                                                    "field",
+                                                ),
+                                                Path(
+                                                    Id(
+                                                        9,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        10,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        11,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ),
+                                                Int(
+                                                    1,
+                                                ),
+                                            ],
+                                            natives: [],
+                                        },
                                     ),
                                 },
                             ),
@@ -180,116 +181,117 @@ Ok(
                                         Id(
                                             8,
                                         ),
-                                        [
-                                            Id,
-                                            ToString,
-                                            Object(
-                                                [],
-                                            ),
-                                            Path(
-                                                Id(
-                                                    2,
-                                                ),
+                                        Lut {
+                                            defs: [
+                                                Id,
+                                                ToString,
+                                                ObjEmpty,
                                                 Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Path(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Path(
-                                                    [
-                                                        (
-                                                            Range(
-                                                                None,
-                                                                None,
-                                                            ),
-                                                            Optional,
-                                                        ),
-                                                    ],
-                                                ),
-                                            ),
-                                            Call(
-                                                Call {
-                                                    id: Id(
-                                                        7,
+                                                    Id(
+                                                        2,
                                                     ),
-                                                    typ: Throw,
-                                                    skip: 0,
-                                                    args: [],
-                                                },
-                                            ),
-                                            Pipe(
-                                                Id(
-                                                    4,
-                                                ),
-                                                false,
-                                                Id(
-                                                    5,
-                                                ),
-                                            ),
-                                            Comma(
-                                                Id(
-                                                    0,
-                                                ),
-                                                Id(
-                                                    6,
-                                                ),
-                                            ),
-                                            Ord(
-                                                Id(
-                                                    12,
-                                                ),
-                                                Eq,
-                                                Id(
-                                                    13,
-                                                ),
-                                            ),
-                                            Id,
-                                            Str(
-                                                "headers",
-                                            ),
-                                            Str(
-                                                "host",
-                                            ),
-                                            Path(
-                                                Id(
-                                                    9,
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
                                                 ),
                                                 Path(
-                                                    [
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    10,
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Range(
+                                                                    None,
+                                                                    None,
                                                                 ),
+                                                                Optional,
                                                             ),
-                                                            Essential,
-                                                        ),
-                                                        (
-                                                            Index(
-                                                                Id(
-                                                                    11,
-                                                                ),
-                                                            ),
-                                                            Essential,
-                                                        ),
-                                                    ],
+                                                        ],
+                                                    ),
                                                 ),
-                                            ),
-                                            Str(
-                                                "google.com",
-                                            ),
-                                        ],
+                                                Call(
+                                                    Call {
+                                                        id: Id(
+                                                            7,
+                                                        ),
+                                                        typ: Throw,
+                                                        skip: 0,
+                                                        args: [],
+                                                    },
+                                                ),
+                                                Pipe(
+                                                    Id(
+                                                        4,
+                                                    ),
+                                                    false,
+                                                    Id(
+                                                        5,
+                                                    ),
+                                                ),
+                                                Comma(
+                                                    Id(
+                                                        0,
+                                                    ),
+                                                    Id(
+                                                        6,
+                                                    ),
+                                                ),
+                                                Ord(
+                                                    Id(
+                                                        12,
+                                                    ),
+                                                    Eq,
+                                                    Id(
+                                                        13,
+                                                    ),
+                                                ),
+                                                Id,
+                                                Str(
+                                                    "headers",
+                                                ),
+                                                Str(
+                                                    "host",
+                                                ),
+                                                Path(
+                                                    Id(
+                                                        9,
+                                                    ),
+                                                    Path(
+                                                        [
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        10,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                            (
+                                                                Index(
+                                                                    Id(
+                                                                        11,
+                                                                    ),
+                                                                ),
+                                                                Essential,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ),
+                                                Str(
+                                                    "google.com",
+                                                ),
+                                            ],
+                                            natives: [],
+                                        },
                                     ),
                                 },
                             ),
