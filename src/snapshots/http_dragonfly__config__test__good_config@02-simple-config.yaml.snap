@@ -1,6 +1,6 @@
 ---
 source: src/config.rs
-expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
 input_file: tests/configs/good/02-simple-config.yaml
 ---
 Ok(
@@ -262,7 +262,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.2.6",
+                                            "0.2.7",
                                         ),
                                     },
                                     HeaderTransform {
