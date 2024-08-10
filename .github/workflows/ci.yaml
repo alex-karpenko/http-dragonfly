@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 5 * * 5"
+env:
+  CI: true
 
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      CI: true
     strategy:
       matrix:
         rust:
