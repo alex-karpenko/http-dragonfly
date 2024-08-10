@@ -6,10 +6,6 @@
 <a href="https://github.com/alex-karpenko/http-dragonfly/actions/workflows/publish-image.yaml" rel="nofollow"><img src="https://img.shields.io/github/actions/workflow/status/alex-karpenko/http-dragonfly/publish-image.yaml?label=publish" alt="Docker image publishing status"></a>
 <a href="https://app.codecov.io/github/alex-karpenko/http-dragonfly" rel="nofollow"><img src="https://img.shields.io/codecov/c/github/alex-karpenko/http-dragonfly" alt="License"></a>
 <a href="https://github.com/alex-karpenko/http-dragonfly/blob/HEAD/LICENSE" rel="nofollow"><img src="https://img.shields.io/github/license/alex-karpenko/http-dragonfly" alt="License"></a>
-
-
-https://img.shields.io/codecov/c/github/alex-karpenko/http-dragonfly
-
 </p>
 
 This is a tiny service app to redirect, split or relay HTTP calls to one or more destinations based on flexible configuration.
