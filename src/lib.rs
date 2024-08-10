@@ -1,28 +1,30 @@
 pub mod cli;
 pub mod config;
 pub mod context;
+pub mod signal;
 
 mod errors;
 mod handler;
 mod health_check;
 
 use cli::CliConfig;
-use config::AppConfig;
+use config::{listener::ListenerConfig, AppConfig};
 use context::{Context, RootEnvironment};
 use futures_util::future::join_all;
 use handler::RequestHandler;
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Server,
+use hyper::service::service_fn;
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server::conn::auto::Builder,
 };
-use std::{convert::Infallible, error::Error, sync::Arc};
+use signal::SignalHandler;
+use std::{error::Error, sync::Arc};
 use tokio::{
+    net::TcpListener,
     select,
-    signal::unix::{signal, SignalKind},
-    task::JoinHandle,
+    task::{JoinHandle, JoinSet},
 };
-use tracing::info;
+use tracing::{error, warn};
 
 pub type HyperTaskJoinHandle = JoinHandle<Result<(), hyper::Error>>;
 
@@ -35,31 +37,19 @@ pub async fn run(
     let mut servers: Vec<HyperTaskJoinHandle> = vec![];
 
     for cfg in app_config.listeners().iter().map(Arc::new) {
-        let server = Server::bind(&cfg.socket());
-        let server = server.http1_header_read_timeout(cfg.timeout());
+        let listener = TcpListener::bind(&cfg.socket()).await?;
+        //TODO: let server = server.http1_header_read_timeout(cfg.timeout());
 
-        let name = cfg.id();
         let ctx = root_ctx.clone();
         let cfg = cfg.clone();
-        let handler = RequestHandler::new(*cfg, *ctx);
 
-        let make_service = make_service_fn(move |conn: &AddrStream| {
-            let addr = conn.remote_addr();
-            let service = service_fn(move |req| handler.handle(addr, req));
-
-            async move { Ok::<_, Infallible>(service) }
-        });
-
-        let server = server
-            .serve(make_service)
-            .with_graceful_shutdown(shutdown_signal(name));
-
+        let server = service_loop(listener, &ctx, &cfg);
         servers.push(tokio::spawn(server));
     }
 
     // Setup health check responder
     if let Some(port) = cli_config.health_check_port {
-        servers.push(health_check::new(port, 5));
+        servers.push(health_check::new(port, 5).await);
     }
 
     let _results = join_all(servers).await;
@@ -67,25 +57,50 @@ pub async fn run(
     Ok(())
 }
 
-/// Shutdown signal handler
-///
-/// Subscribes on and waits for one of the terminate/interrupt/quit/hangup signals
-async fn shutdown_signal(listener_name: String) {
-    let mut terminate = signal(SignalKind::terminate())
-        .expect("{listener_name}: unable to install TERM signal handler");
-    let mut interrupt = signal(SignalKind::interrupt())
-        .expect("{listener_name}: unable to install INT signal handler");
-    let mut quit =
-        signal(SignalKind::quit()).expect("{listener_name}: unable to install QUIT signal handler");
-    let mut hangup = signal(SignalKind::hangup())
-        .expect("{listener_name}: unable to install HANGUP signal handler");
+async fn service_loop(
+    listener: TcpListener,
+    ctx: &'static Context<'static>,
+    cfg: &'static ListenerConfig,
+) -> Result<(), hyper::Error> {
+    let mut join_set = JoinSet::new();
 
-    let sig = select! {
-        _ = terminate.recv() => "TERM",
-        _ = interrupt.recv() => "INT",
-        _ = quit.recv() => "QUIT",
-        _ = hangup.recv() => "HANGUP",
-    };
+    let name = cfg.id();
+    let handler = RequestHandler::new(cfg, ctx);
+    let mut signal_handler = SignalHandler::new(name);
 
-    info!("{listener_name}: {sig} signal has been received, shutting down");
+    loop {
+        select! {
+            biased;
+            _ = signal_handler.wait() => {
+                while (join_set.join_next().await).is_some() {};
+                break
+            },
+            accepted = listener.accept() => {
+                let (stream, addr) = match accepted {
+                    Ok(x) => x,
+                    Err(e) => {
+                        warn!(error = %e, "failed to accept connection");
+                        continue;
+                    }
+                };
+
+                let serve_connection = async move {
+                    let result = Builder::new(TokioExecutor::new())
+                        .serve_connection(
+                            TokioIo::new(stream),
+                            service_fn(move |req| handler.handle(addr, req)),
+                        )
+                        .await;
+
+                    if let Err(e) = result {
+                        error!(error = %e, "error serving request from {addr}");
+                    }
+                };
+
+                join_set.spawn(serve_connection);
+            }
+        }
+    }
+
+    Ok(())
 }

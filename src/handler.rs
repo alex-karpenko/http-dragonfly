@@ -1,13 +1,18 @@
 use futures_util::future::join_all;
 use http::{Error, HeaderValue};
+use http_body_util::{BodyExt, Full};
 use hyper::{
-    client::HttpConnector, header::HOST, http, Body, Client, Error as HyperError, Request,
-    Response, StatusCode, Uri,
+    body::{Bytes, Incoming},
+    header::HOST,
+    http, /*Error as HyperError, */ Request, Response, StatusCode, Uri,
 };
 use hyper_tls::HttpsConnector;
+use hyper_util::{
+    client::legacy::{connect::HttpConnector, Client},
+    rt::TokioExecutor,
+};
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
-use tokio::time::error::Elapsed;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -21,7 +26,8 @@ use crate::{
     context::Context,
 };
 
-pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Body>>, &'a Context<'a>)>;
+pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Full<Bytes>>>, &'a Context<'a>)>;
+pub type HyperError = hyper_util::client::legacy::Error;
 
 #[derive(Clone, Copy, Debug)]
 pub struct RequestHandler {
@@ -41,8 +47,8 @@ impl RequestHandler {
     pub async fn handle<'a>(
         self,
         addr: SocketAddr,
-        req: Request<Body>,
-    ) -> Result<Response<Body>, Error> {
+        req: Request<Incoming>,
+    ) -> Result<Response<Full<Bytes>>, Error> {
         let req_id = Uuid::new_v4();
         info!(
             "{req_id}: accepted from: {}, to: {}, method: {}",
@@ -65,9 +71,11 @@ impl RequestHandler {
 
         // Prepare owned body
         let (req_parts, req_body) = req.into_parts();
-        let body_bytes = hyper::body::to_bytes(req_body)
+        let body_bytes = req_body
+            .collect()
             .await
-            .expect("Looks like a BUG!");
+            .expect("Looks like a BUG!")
+            .to_bytes();
         // Add own context - listener + request
         let ctx = self
             .root_ctx
@@ -182,11 +190,11 @@ impl RequestHandler {
                 target_request_builder = target_request_builder.header(k, v);
             }
             // Finalize request with body
-            let target_request: Request<Body> = if let Some(body) = &target.body() {
+            let target_request: Request<Full<Bytes>> = if let Some(body) = &target.body() {
                 let body = env_with_context_no_errors(body, |v| ctx.get(&v.into()));
-                target_request_builder.body(Body::from(body))?
+                target_request_builder.body(Full::from(body))?
             } else {
-                target_request_builder.body(Body::from(body_bytes.clone()))?
+                target_request_builder.body(Full::from(body_bytes.clone()))?
             };
 
             // Put request to queue
@@ -201,7 +209,7 @@ impl RequestHandler {
             http_connector.set_connect_timeout(Some(target.timeout()));
             http_connector.enforce_http(false);
             let http_connector = HttpsConnector::new_with_connector(http_connector);
-            let http_client = Client::builder().build(http_connector);
+            let http_client = Client::builder(TokioExecutor::default()).build(http_connector);
             let http_request = http_client.request(target_request);
             let http_request = tokio::time::timeout(target.timeout(), http_request);
 
@@ -211,12 +219,26 @@ impl RequestHandler {
         }
 
         // Get results
-        let results = join_all(target_requests).await;
-        let results: Vec<ResponseResult> = results
-            .into_iter()
-            .map(|r| r.unwrap())
-            .map(ResponseResult::from)
-            .collect();
+        let raw_results = join_all(target_requests).await;
+        let mut results: Vec<ResponseResult> = vec![];
+        for r in raw_results.into_iter().map(|r| r.unwrap()) {
+            let r = match r {
+                Err(_ee) => ResponseResult::Timeout,
+                Ok(r) => match r {
+                    Ok(r) => {
+                        // Prepare owned body
+                        let (parts, body) = r.into_parts();
+                        let body = body.collect().await.expect("Looks like a BUG!").to_bytes();
+                        let r: Response<Full<Bytes>> =
+                            Response::from_parts(parts, Full::from(body));
+                        ResponseResult::Ok(r)
+                    }
+                    Err(he) => ResponseResult::HyperError(he),
+                },
+            };
+            results.push(r);
+        }
+
         // Pre-process results
         let mut responses: ResponsesMap = ResponsesMap::new();
         for (pos, res) in results.into_iter().enumerate() {
@@ -298,19 +320,7 @@ impl RequestHandler {
 
 #[derive(Debug)]
 pub enum ResponseResult {
-    Ok(Response<Body>),
+    Ok(Response<Full<Bytes>>),
     HyperError(HyperError),
     Timeout,
-}
-
-impl From<Result<Result<Response<Body>, HyperError>, Elapsed>> for ResponseResult {
-    fn from(r: Result<Result<Response<Body>, HyperError>, Elapsed>) -> Self {
-        match r {
-            Err(_ee) => Self::Timeout,
-            Ok(r) => match r {
-                Ok(r) => Self::Ok(r),
-                Err(he) => Self::HyperError(he),
-            },
-        }
-    }
 }
