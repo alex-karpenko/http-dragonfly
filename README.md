@@ -1,5 +1,17 @@
 # http-dragonfly
 
+<p>
+<a href="https://github.com/alex-karpenko/http-dragonfly/actions/workflows/ci.yaml" rel="nofollow"><img src="https://img.shields.io/github/actions/workflow/status/alex-karpenko/http-dragonfly/ci.yaml?label=ci" alt="CI status"></a>
+<a href="https://github.com/alex-karpenko/http-dragonfly/actions/workflows/audit.yaml" rel="nofollow"><img src="https://img.shields.io/github/actions/workflow/status/alex-karpenko/http-dragonfly/audit.yaml?label=audit" alt="Audit status"></a>
+<a href="https://github.com/alex-karpenko/http-dragonfly/actions/workflows/publish-image.yaml" rel="nofollow"><img src="https://img.shields.io/github/actions/workflow/status/alex-karpenko/http-dragonfly/publish-image.yaml?label=publish" alt="Docker image publishing status"></a>
+<a href="https://app.codecov.io/github/alex-karpenko/http-dragonfly" rel="nofollow"><img src="https://img.shields.io/codecov/c/github/alex-karpenko/http-dragonfly" alt="License"></a>
+<a href="https://github.com/alex-karpenko/http-dragonfly/blob/HEAD/LICENSE" rel="nofollow"><img src="https://img.shields.io/github/license/alex-karpenko/http-dragonfly" alt="License"></a>
+
+
+https://img.shields.io/codecov/c/github/alex-karpenko/http-dragonfly
+
+</p>
+
 This is a tiny service app to redirect, split or relay HTTP calls to one or more destinations based on flexible configuration.
 
 ## Features
@@ -165,7 +177,7 @@ Each listener has a handler which listens to specific IP and port and does the f
 
 ### Contexts
 
-Context is a set of variables (like Unix environment variables) attached to each request. 
+Context is a set of variables (like Unix environment variables) attached to each request.
 Those variables define request's environment
 that can be used almost everywhere in configuration file to substitute parameters and actually to impact configuration and request's content on the fly.
 
@@ -179,7 +191,7 @@ Just a few examples of how to use contexts:
 There are four contexts depending on the query stage:
 
 | Context type | Variables                                    | Description                                                                                                                           |
-|--------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Application  | CTX_APPLICATION_NAME                         | Name of this app, `http-dragonfly`                                                                                                    |
 |              | CTX_APPLICATION_VERSION                      | Version of the app                                                                                                                    |
 |              | OS environment variables                     | All OS environment variables which names satisfy restriction mask from the command line (default mask is `^HTTP_ENV_[a-zA-Z0-9_]+$]`) |
@@ -195,7 +207,7 @@ There are four contexts depending on the query stage:
 | Response     | CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME> | Each response's header has it's context variable                                                                                      |
 |              | CTX_RESPONSE_STATUS                          | Status returned by target query                                                                                                       |
 
-To use context variables in the config just specify it similar to the `bash` variables (all shell expressions work). 
+To use context variables in the config just specify it similar to the `bash` variables (all shell expressions work).
 Few obvious examples, more realistic examples you can see in this file below:
 
 - `${CTX_APPLICATION_NAME}`
@@ -236,7 +248,7 @@ Format: string.
 
 Default: `LISTENER-<IP>:<PORT>` where IP and PORT are values from `listen_on` parameter.
 
-Each listener has to have its own unique name (ID) to distinguish listeners at least in logs. 
+Each listener has to have its own unique name (ID) to distinguish listeners at least in logs.
 This is an optional parameter with default
 to `LISTENER-<IP>:<PORT>` where IP and PORT are values from listener's `listen_on` parameter.
 
@@ -261,7 +273,7 @@ Format: human readable time interval, like `5s`, `1m30s`, etc.
 
 Default: `10s`
 
-This time is an interval between accepting incoming connection and getting request's data like headers and/or body. 
+This time is an interval between accepting incoming connection and getting request's data like headers and/or body.
 If the remote side hasn't sent any data during this interval connection will be dropped without a response.
 
 #### Listener: `methods`
@@ -299,7 +311,7 @@ Generally, all strategies can be divided into four groups by prefixes:
 - `conditional_routing` - we query **single target** only which satisfies some condition (see below) and return its response.
 
 | Strategy name         | How it works                                                                                                                                                                                                                                                                                                                  |
-|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | always_override       | Query all allowed targets (see explanation of allowed targets below the table) but return response defined in `response.override` section (see below)                                                                                                                                                                         |
 | always_target_id      | Query all allowed targets but return response from one specific target regardless of it's status                                                                                                                                                                                                                              |
 | ok_then_failed        | Query all allowed targets, if at least on response is successful - return any successful one, if all responses are failed - return any failed response                                                                                                                                                                        |
@@ -396,7 +408,7 @@ Root contains the following objects:
     - `path`: path
     - `query`: query string of URI
 
-Special case of condition expression (and actually default value) is word `default` instead of predicate, 
+Special case of condition expression (and actually default value) is word `default` instead of predicate,
 that means this condition is true and target have to be queried anyway.
 This condition expression should be used with `conditional_routing` strategy
 to mark target which will be queried in case if all other conditions are false.
