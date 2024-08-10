@@ -1,3 +1,5 @@
+use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator};
+use crate::{context::Context, errors::HttpDragonflyError};
 use hyper::{body::Bytes, http::request::Parts, Uri};
 use jaq_interpret::{Ctx, Filter, FilterT, ParseCtx, RcIter, Val};
 use serde::{
@@ -10,10 +12,6 @@ use std::{
     time::Duration,
 };
 use tracing::{debug, error};
-
-use crate::{context::Context, errors::HttpDragonflyError};
-
-use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator};
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 

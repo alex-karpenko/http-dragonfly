@@ -1,4 +1,5 @@
-use hyper::{http::request::Parts, Body, Response};
+use http_body_util::Full;
+use hyper::{body::Bytes, http::request::Parts, Response};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Serialize;
@@ -116,7 +117,7 @@ impl<'a> Context<'a> {
         self.with(own)
     }
 
-    pub fn with_response(&'a self, resp: &Response<Body>) -> Context<'a> {
+    pub fn with_response(&'a self, resp: &Response<Full<Bytes>>) -> Context<'a> {
         let mut own = ContextMap::new();
 
         // CTX_RESPONSE_HEADERS_<UPPERCASE_HEADER_NAME>
@@ -249,19 +250,19 @@ pub mod test_context {
         SocketAddr::new(Ipv4Addr::new(4, 3, 2, 1).into(), 12345)
     }
 
-    fn get_test_request() -> Request<Body> {
+    fn get_test_request() -> Request<Full<Bytes>> {
         Request::builder()
             .uri("https://www.google.com/test-path?query=some-query")
             .header("X-Some-Header", "some header value")
             .method("POST")
-            .body(Body::empty())
+            .body(Full::from(Bytes::new()))
             .unwrap()
     }
 
-    fn get_test_response() -> Response<Body> {
+    fn get_test_response() -> Response<Full<Bytes>> {
         Response::builder()
             .header("X-Some-Header", "some header value")
-            .body(Body::empty())
+            .body(Full::from(Bytes::new()))
             .unwrap()
     }
 

@@ -1,44 +1,69 @@
-use hyper::{
-    server::conn::AddrStream,
-    service::{make_service_fn, service_fn},
-    Body, Response, Server,
+use crate::{signal::SignalHandler, HyperTaskJoinHandle};
+use http_body_util::Full;
+use hyper::{body::Bytes, service::service_fn, Response};
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server::conn::auto::Builder,
 };
-use std::{
-    convert::Infallible,
-    net::{Ipv4Addr, SocketAddr},
-    time::Duration,
-};
-use tracing::{debug, info};
-
-use crate::{shutdown_signal, HyperTaskJoinHandle};
+use std::net::{Ipv4Addr, SocketAddr};
+use tokio::{net::TcpListener, select, task::JoinSet};
+use tracing::{debug, error, info, warn};
 
 /// Health check handler
 ///
 /// Listens to health-check port and responds 200 OK to any GET request
-async fn handle(addr: SocketAddr) -> Result<Response<Body>, hyper::Error> {
+async fn handle(addr: SocketAddr) -> Result<Response<Full<Bytes>>, hyper::Error> {
     debug!("health check, from={}", addr);
-    Ok(Response::new(Body::from("OK\n")))
+    Ok(Response::new(Full::from(Bytes::from("OK\n"))))
 }
 
 /// Health check handler builder
-pub fn new(port: u16, timeout_sec: u64) -> HyperTaskJoinHandle {
+pub async fn new(port: u16, _timeout_sec: u64) -> HyperTaskJoinHandle {
     info!("Creating health check handler on *:{}", port);
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
     let socket = SocketAddr::new(ip.into(), port);
-    let server = Server::bind(&socket);
-    let server = server.http1_header_read_timeout(Duration::from_secs(timeout_sec));
+    let listener = TcpListener::bind(&socket)
+        .await
+        .expect("unable to create health check listener");
+    let mut signal_handler = SignalHandler::new("health");
+    let mut join_set = JoinSet::new();
 
-    let make_service = make_service_fn(move |conn: &AddrStream| {
-        let addr = conn.remote_addr();
-        let service = service_fn(move |_req| handle(addr));
+    let server = async move {
+        loop {
+            // TODO: add timeout handling
+            select! {
+                biased;
+                _ = signal_handler.wait() => {
+                    while (join_set.join_next().await).is_some() {}
+                    break
+                },
+                accepted = listener.accept() => {
+                    let (stream, addr) = match accepted {
+                        Ok(x) => x,
+                        Err(e) => {
+                            warn!(error = %e, "failed to accept connection");
+                            continue;
+                        }
+                    };
 
-        async move { Ok::<_, Infallible>(service) }
-    });
+                    let serve_connection = async move {
+                        let result = Builder::new(TokioExecutor::new())
+                            .serve_connection(TokioIo::new(stream), service_fn(move |_| handle(addr)))
+                            .await;
 
-    let server = server
-        .serve(make_service)
-        .with_graceful_shutdown(shutdown_signal("Health check handler".into()));
+                        if let Err(e) = result {
+                            error!(error = %e, "error serving request from {addr}");
+                        }
+                    };
+
+                    join_set.spawn(serve_connection);
+                }
+            }
+        }
+
+        Ok(())
+    };
 
     tokio::spawn(server)
 }
