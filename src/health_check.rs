@@ -1,8 +1,9 @@
 use crate::{signal::SignalHandler, HyperTaskJoinHandle};
+use core::time::Duration;
 use http_body_util::Full;
 use hyper::{body::Bytes, service::service_fn, Response};
 use hyper_util::{
-    rt::{TokioExecutor, TokioIo},
+    rt::{TokioExecutor, TokioIo, TokioTimer},
     server::conn::auto::Builder,
 };
 use std::net::{Ipv4Addr, SocketAddr};
@@ -18,7 +19,7 @@ async fn handle(addr: SocketAddr) -> Result<Response<Full<Bytes>>, hyper::Error>
 }
 
 /// Health check handler builder
-pub async fn new(port: u16, _timeout_sec: u64) -> HyperTaskJoinHandle {
+pub async fn new(port: u16, timeout_sec: u64) -> HyperTaskJoinHandle {
     info!("Creating health check handler on *:{}", port);
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
@@ -31,7 +32,6 @@ pub async fn new(port: u16, _timeout_sec: u64) -> HyperTaskJoinHandle {
 
     let server = async move {
         loop {
-            // TODO: add timeout handling
             select! {
                 biased;
                 _ = signal_handler.wait() => {
@@ -49,6 +49,9 @@ pub async fn new(port: u16, _timeout_sec: u64) -> HyperTaskJoinHandle {
 
                     let serve_connection = async move {
                         let result = Builder::new(TokioExecutor::new())
+                            .http1()
+                            .timer(TokioTimer::default())
+                            .header_read_timeout(Duration::from_secs(timeout_sec))
                             .serve_connection(TokioIo::new(stream), service_fn(move |_| handle(addr)))
                             .await;
 
