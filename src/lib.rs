@@ -14,7 +14,7 @@ use futures_util::future::join_all;
 use handler::RequestHandler;
 use hyper::service::service_fn;
 use hyper_util::{
-    rt::{TokioExecutor, TokioIo},
+    rt::{TokioExecutor, TokioIo, TokioTimer},
     server::conn::auto::Builder,
 };
 use signal::SignalHandler;
@@ -38,7 +38,6 @@ pub async fn run(
 
     for cfg in app_config.listeners().iter().map(Arc::new) {
         let listener = TcpListener::bind(&cfg.socket()).await?;
-        //TODO: let server = server.http1_header_read_timeout(cfg.timeout());
 
         let ctx = root_ctx.clone();
         let cfg = cfg.clone();
@@ -86,6 +85,9 @@ async fn service_loop(
 
                 let serve_connection = async move {
                     let result = Builder::new(TokioExecutor::new())
+                        .http1()
+                        .timer(TokioTimer::default())
+                        .header_read_timeout(cfg.timeout())
                         .serve_connection(
                             TokioIo::new(stream),
                             service_fn(move |req| handler.handle(addr, req)),
