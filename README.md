@@ -8,11 +8,14 @@
 <a href="https://github.com/alex-karpenko/http-dragonfly/blob/HEAD/LICENSE" rel="nofollow"><img src="https://img.shields.io/github/license/alex-karpenko/http-dragonfly" alt="License"></a>
 </p>
 
-This is a tiny service app to redirect, split or relay HTTP calls to one or more destinations based on flexible configuration.
+This is a tiny service app to redirect, split or relay HTTP calls to one or more destinations based on flexible
+configuration.
 
 ## Features
 
-- Listen to one or more IP/ports pairs to serve calls. Each listener has its own configuration. The Number of listeners is unlimited.
+- Listen to one or more IP/ports pairs to serve calls.
+  Each listener has its own configuration.
+  The number of listeners is unlimited.
 - Relay HTTP requests to one or more targets based on a reach and flexible configuration set.
 - Filter/restrict requests by methods, headers, body content and route it to all or conditionally selected targets.
 - Transform request's headers, path and body in a flexible configurable way.
@@ -26,14 +29,17 @@ Actually use cases are restricted by your fantasy only :)
 
 **Debugging**:
 
-- duplicate all queries from production environment to one or more test environments to evaluate new functionality with real production requests and workload
+- duplicate all queries from production environment to one or more test environments to evaluate new functionality with
+  real production requests and workload
 - duplicate specific conditionally selected queries to another target to analyze some issues dependent on content
 - send web-hooks to several (test) environments simultaneously
 
 **Logging/observing/learning**:
 
-- duplicate queries to different log storages without affecting of normal request flow: i.e., log body to ElasticSearch, source IPs and user agent to some simple logger
-- duplicate some conditionally selected queries (for example, based on source IP or query string) to special endpoint to alert about an abuse or intrusion attempt
+- duplicate queries to different log storages without affecting of normal request flow: i.e., log body to ElasticSearch,
+  source IPs and user agent to some simple logger
+- duplicate some conditionally selected queries (for example, based on source IP or query string) to special endpoint to
+  alert about an abuse or intrusion attempt
 - stream all (or selected) requests to machine learning system without affecting normal processing
 
 **Routing**:
@@ -42,11 +48,12 @@ Actually use cases are restricted by your fantasy only :)
 
 ## Usage
 
-The easiest way to run exporter is to use [Docker image](#docker-image).
-If you use Kubernetes to run workload, you can use [Helm chart](#helm-chart) to configure and deploy exporter.
-The third way to run exporter is to [build native Rust binary](#build-your-own-binary) using Cargo utility and run it.
+The easiest way to run `http-dragonfly` is to use [Docker image](#docker-image).
+If you use Kubernetes to run workload, you can use [Helm chart](#helm-chart) to configure and deploy `http-dragonfly`.
+The third way to run `http-dragonfly` is to [build native Rust binary](#build-your-own-binary) using Cargo utility and run it.
 
-Anyway, to run `http-dragonfly` we need a [configuration file](#concepts-and-configuration) with listeners, targets, transformations and response strategy configured.
+Anyway, to run `http-dragonfly` we need a [configuration file](#concepts-and-configuration) with listeners, targets,
+transformations and response strategy configured.
 
 ### Docker image
 
@@ -82,7 +89,12 @@ Options:
           Print version
 ```
 
-The only mandatory parameter is a path to configuration file. Detailed explanation of all possible configuration options is in the dedicated [Concepts and Configuration](#concepts-and-configuration) section. Just for test purpose, there is an [example minimal config](config.yaml) file to listen on default 8080 port and forward requests to <http://www.google.com/>. To use it:
+The only mandatory parameter is a path to configuration file.
+Detailed explanation of all possible configuration options is in the dedicated [Concepts and Configuration](#concepts-and-configuration) section.
+Just for test purpose, there is
+an [example minimal config](config.yaml) file to listen on default 8080 port and forward requests
+to <http://www.google.com/>.
+To use it:
 
 ```bash
 docker run --rm --name http-dragonfly -v $PWD/config.yaml:/config.yaml alex-karpenko/http-dragonfly:latest --config /config.yaml -v
@@ -117,8 +129,8 @@ service:
     port: 3000 # actually, this port is for health checks only
     expose: false
   listeners: # these ports are for listeners
-  - port: 8000
-    name: test-listener-1 # name is optional
+    - port: 8000
+      name: test-listener-1 # name is optional
 
 config:
   listeners:
@@ -126,7 +138,7 @@ config:
       listen_on: "*:8000"
       timeout: 5s
       methods:
-      - GET
+        - GET
       strategy: failed_then_ok
       targets:
         - url: https://www.google.com/
@@ -134,13 +146,13 @@ config:
       response:
         override:
           headers:
-          - add: x-response-target-id
-            value: ${CTX_TARGET_ID}
+            - add: x-response-target-id
+              value: ${CTX_TARGET_ID}
 ```
 
 ### Build your own binary
 
-Since exported is written in Rust, you can use standard Rust tools to build binary for any platform you need.
+Since `http-dragonfly` is written in Rust, you can use standard Rust tools to build binary for any platform you need.
 Of course, you have to have [Rust](https://rust-lang.org) tool-chain installed.
 
 ```bash
@@ -175,7 +187,8 @@ Each listener has a handler which listens to specific IP and port and does the f
 
 Context is a set of variables (like Unix environment variables) attached to each request.
 Those variables define request's environment
-that can be used almost everywhere in configuration file to substitute parameters and actually to impact configuration and request's content on the fly.
+that can be used almost everywhere in a configuration file to substitute parameters and actually to impact configuration
+and request's content on the fly.
 
 Just a few examples of how to use contexts:
 
@@ -212,15 +225,20 @@ Few obvious examples, more realistic examples you can see in this file below:
 
 ***Important notes:***
 
-> - Target and responses context's variables are undefined in response context for strategies like `*_override` because there is no response target exists.
-> - Each context includes context of previous stage: request includes application, target includes request, response includes target (except above note).
-> - Using of OS environment variables is restricted to specified mask to avoid including of all app environment to the context and unintentional exposing of the run-time environment state.
-> - If context variable is not defined and there is no default value in the expression, then error won't be raised, and variable won't be substituted, and the whole expression will be left as it is.
-> - There are some special cases where context variables can't be used and will be ignored (lft as is), see notes in particular configuration sections.
+> - Target and responses context's variables are undefined in response context for strategies like `*_override` because
+    there is no response target exists.
+> - Each context includes context of previous stage: request includes application, target includes request, response
+    includes target (except above note).
+> - Using of OS environment variables is restricted to specified mask to avoid including of all app environment to the
+    context and unintentional exposing of the run-time environment state.
+> - If context variable is not defined and there is no default value in the expression, then error won't be raised, and
+    variable won't be substituted, and the whole expression will be left as it is.
+> - There are some special cases where context variables can't be used and will be ignored (lft as is), see notes in
+    particular configuration sections.
 
 Variables substitution stages:
 
-- `application` context applies to whole config file just after loading before parsing and validating.
+- `application` context applies to a whole config file just after loading before parsing and validating.
 - `request` context applies to each request after receiving before headers and body transformations.
 - `target` context applies to its target before target's headers, body and URL transformation.
 - `response` context applies during a response override process before headers and body transformation.
@@ -259,7 +277,7 @@ port is an integer in the range 1..65535.
 
 Default: `0.0.0.0:8080`
 
-It's obvious that each listener accepts connections on its own IP and port.
+Each listener accepts connections on its own IP and port.
 If you have more than one listener in the config,
 you have to specify this parameter at least for all non-default listeners.
 
@@ -302,9 +320,12 @@ This is one of the crucial listener's config parameters.
 Generally, all strategies can be divided into four groups by prefixes:
 
 - `always` - regardless of any obtained responses from the targets we should **always** send back something else (override) or unconditional (e.g., response form some specified target)
-- `ok` - we respond with **any successful** response if we got at least one successful status from any target, but if **all targets are failed** (regardless of kind of failure) we should return something else
-- `failed` - like previous but vise versa: we respond with **any failed** response if we got at least one failure status from any target, but if **all targets are ok** we should return something else
-- `conditional_routing` - we query **single target** only which satisfies some condition (see below) and return its response.
+- `ok` - we respond with **any successful** response if we got at least one successful status from any target, but if *
+  *all targets are failed** (regardless of kind of failure) we should return something else
+- `failed` - like previous but vise versa: we respond with **any failed** response if we got at least one failure status
+  from any target, but if **all targets are ok** we should return something else
+- `conditional_routing` - we query **single target** only which satisfies some condition (see below) and return its
+  response.
 
 | Strategy name         | How it works                                                                                                                                                                                                                                                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -341,8 +362,10 @@ By default, all (untransformed) headers will be passed to targets without change
 
 Possible transformations:
 
-- `add` - creates new header with specified name and value, but if header already exists - transformation will be ignored.
-- `update` - change value of existing header with specified name, if header doesn't exist - transformation will be ignored.
+- `add` - creates new header with specified name and value, but if header already exists - transformation will be
+  ignored.
+- `update` - change value of existing header with specified name, if header doesn't exist - transformation will be
+  ignored.
 - `drop` - drops header with specified name if it exists. Special case is `*` name which drops all headers.
 
 Examples:
@@ -358,8 +381,11 @@ headers:
 
 ***Important note***:
 
-> - if you strictly need to set header to some specific value regardless of header's presence you should add two consecutive actions - `add` and `update` with the same `value`, order doesn't matter: if you try to update non-existent header - new one won't appear, if you try to add existing header - value won't be changed.
-> - if you need to guarantee some stable set of headers instead of requested, drop all headers (`drop: "*"`) as first action and add all needed ones as following actions.
+> - if you strictly need to set header to some specific value regardless of header's presence you should add two
+    consecutive actions - `add` and `update` with the same `value`, order doesn't matter: if you try to update
+    non-existent header - new one won't appear, if you try to add existing header - value won't be changed.
+> - if you need to guarantee some stable set of headers instead of requested, drop all headers (`drop: "*"`) as first
+    action and add all necessary ones as following actions.
 
 #### Listener: `targets`
 
@@ -375,16 +401,22 @@ Target config includes the following parameters:
 - `body`: create new body if defined, or pass original body by default
 - `timeout`: time to wait for response from the target, [like listener's config](#listener-timeout), default is `60s`
 - `on_error`: what to do if error occurred during request, default is `propagate`, see explanation below
-- `error_status`: what status should be returned from the target if `on_error` set to `status`, usually (but not mandatory) this is something like `500`
-- `condition`: predicate expression to calculate before request, if value is `false` this target will be excluded from the list of allowed targets, default is `true`, see details below
+- `error_status`: what status should be returned from the target if `on_error` set to `status`, usually (but not
+  mandatory) this is something like `500`
+- `condition`: predicate expression to calculate before request, if value is `false` this target will be excluded from
+  the list of allowed targets, default is `true`, see details below
 
 ##### Listener: `targets.on_error`
 
-Parameter `on_error` defines target's behavior in case of any error like request timeout, network error, application problems or any other cases when getting response (even unsuccessful) is impossible. Possible values:
+Parameter `on_error` defines target's behavior in case of any error like request timeout, network error, application
+problems or any other cases when getting response (even unsuccessful) is impossible.
+Possible values:
 
 - `propagate`: return reasonable status code which points to cause of error (if possible), this is some `5xx` status.
-- `status`: regardless of error nature, return some specific status code that should be defined in `error_status` parameter.
-- `drop`: remove this target from the list of responses — it won't be even considered as possible response during post-processing of results.
+- `status`: regardless of error nature, return some specific status code that should be defined in `error_status`
+  parameter.
+- `drop`: remove this target from the list of responses — it won't be even considered as possible response during
+  post-processing of results.
 
 ##### Listener: `targets.condition`
 
@@ -397,12 +429,12 @@ Root contains the following objects:
 - `body`: JSON body on original request (before body processing if `target.body` is defined)
 - `env`: target request context - list of name/value pairs of environment variables (before applying target's context)
 - `request`: complex object with original request's attributes (before applying of any target's transformation)
-  - `headers`: list of name/value pairs with request headers (***headers names are in lower case***)
-  - `uri`: complex object
-    - `full`: full URI staring
-    - `host`: host part of URI
-    - `path`: path
-    - `query`: query string of URI
+    - `headers`: list of name/value pairs with request headers (***headers names are in lower case***)
+    - `uri`: complex object
+        - `full`: full URI staring
+        - `host`: host part of URI
+        - `path`: path
+        - `query`: query string of URI
 
 Special case of condition expression (and actually default value) is word `default` instead of predicate,
 that means this condition is true and target have to be queried anyway.
@@ -413,13 +445,13 @@ If strategy is `conditional_routing` there can be only one target with `default`
 Some additional explanation:
 
 - if strategy is any except `conditional_routing`:
-  - condition is empty (absent) or `default` - target will be queried anyway
-  - condition is defined as `jq` expression - target will be queried in case expression evaluating to `true` only
+    - condition is empty (absent) or `default` - target will be queried anyway
+    - condition is defined as `jq` expression - target will be queried in case expression evaluating to `true` only
 - if strategy is `conditional_routing`:
-  - only one condition is true — this target will be queried
-  - all conditions are false, and there is one target with `default` condition - this default will be queried
-  - all conditions are false, and there is no targets with `default` condition - error will be propagated
-  - more than one condition is true — error will be propagated
+    - only one condition is true — this target will be queried
+    - all conditions are false, and there is one target with `default` condition - this default will be queried
+    - all conditions are false, and there is no targets with `default` condition - error will be propagated
+    - more than one condition is true — error will be propagated
 
 In other words `conditional_routing` ensure querying of single target only which satisfy its condition.
 
@@ -437,63 +469,65 @@ Query www.example.com if request has any non-empty path and forward all requests
 
 ```yaml
 listeners:
-- targets:
-  - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
-    id: query
-    condition: .env[CTX_REQUEST_PATH] != ""
-  - url: http://query-logger:9090/
+  - targets:
+      - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
+        id: query
+        condition: .env[CTX_REQUEST_PATH] != ""
+      - url: http://query-logger:9090/
 ```
 
-Query www.example.com if request's header `X-Route-To-Query` is `true` and forward all requests to logger unconditionally:
+Query www.example.com if request's header `X-Route-To-Query` is `true` and forward all requests to logger
+unconditionally:
 
 ```yaml
 listeners:
-- targets:
-  - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
-    id: query
-    condition: .request.headers["x-route-to-query"] == "true"
-  - url: http://query-logger:9090/
+  - targets:
+      - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
+        id: query
+        condition: .request.headers["x-route-to-query"] == "true"
+      - url: http://query-logger:9090/
 ```
 
 Conditional routing depending on value in body with logging of unknown queries and transformation of queries:
 
 ```yaml
 listeners:
-- strategy: conditional_routing
-  targets:
-  - url: https://www.example.com/path-1
-    condition: .body.data.value == 1
-    id: query-1
-    body: |
-      {
-        "query": "${CTX_REQUEST_QUERY:-}",
-        "path": "${CTX_REQUEST_PATH:-}"
-      }
-    headers:
-    - drop: content-length
-    - drop: content-type
-    - add: content-type
-      value: application/json
-  - url: https://www.example.com/path-2
-    id: query-2
-    condition: .body.data.value == 2
-    headers:
-    - update: User-Agent
-      value: ${CTX_APP_NAME}/${CTX_APP_VERSION}
-  - url: https://www.example.com/path-3
-    id: query-3
-    condition: .body.data.value == 3
-    on_error: status
-    error_status: 200
-  - url: http://bad-queries-logger:3333/
-    headers:
-    - drop: Authorization
-    condition: default
+  - strategy: conditional_routing
+    targets:
+      - url: https://www.example.com/path-1
+        condition: .body.data.value == 1
+        id: query-1
+        body: |
+          {
+            "query": "${CTX_REQUEST_QUERY:-}",
+            "path": "${CTX_REQUEST_PATH:-}"
+          }
+        headers:
+          - drop: content-length
+          - drop: content-type
+          - add: content-type
+            value: application/json
+      - url: https://www.example.com/path-2
+        id: query-2
+        condition: .body.data.value == 2
+        headers:
+          - update: User-Agent
+            value: ${CTX_APP_NAME}/${CTX_APP_VERSION}
+      - url: https://www.example.com/path-3
+        id: query-3
+        condition: .body.data.value == 3
+        on_error: status
+        error_status: 200
+      - url: http://bad-queries-logger:3333/
+        headers:
+          - drop: Authorization
+        condition: default
 ```
 
 ***Important notes***:
 
-> - if you change request body remember to drop `content-length` header and add/update `content-type` header, otherwise request handler will panic due to request inconsistency.
+> - if you change request body remember to drop `content-length` header and add/update `content-type` header, otherwise
+    request handler will panic due to request inconsistency.
 
 #### Listener: `response`
 
@@ -507,11 +541,15 @@ response:
   no_targets_status: 500
 ```
 
-This parameter defines how to transform or override (create) response before returning it to the requester. Allowed parameters are:
+This parameter defines how to transform or override (create) response before returning it to the requester.
+Allowed parameters are:
 
-- `target_selector`: target ID to select for response in case of `*_target_id` strategy is configured, this parameter is mandatory for such strategies and allowed in this case only.
-- `failed_status_regex`: regex to assess if response status should be interpreted as failed, reasonable default includes all `4xx` and `5xx` statuses.
-- `no_targets_status`: which status code should be returned in case when no targets to query (all conditions are false) or all responses were dropped due to `on_error: drop` target's parameter and strategy is `*_target_id` or `*_ok`.
+- `target_selector`: target ID to select for response in case of `*_target_id` strategy is configured, this parameter is
+  mandatory for such strategies and allowed in this case only.
+- `failed_status_regex`: regex to assess if response status should be interpreted as failed, reasonable default includes
+  all `4xx` and `5xx` statuses.
+- `no_targets_status`: which status code should be returned in case when no targets to query (all conditions are false)
+  or all responses were dropped due to `on_error: drop` target's parameter and strategy is `*_target_id` or `*_ok`.
 - `override`: response override config (see below), optional
 
 Response override config intended to provide custom (overridden) response parts such as body, headers, and status code.
@@ -523,13 +561,17 @@ So you can define three parameters here:
 
 ***Important notes:***
 
-> - the default behavior of those overrides is to pass original content of body and headers and status. But for all `*_override` strategies defaults is empty body, empty headers and status 200. So if you need to create exactly new response instead of the one obtained from some target, you can (or have to) define those overrides. If you omit this config than `*_override` strategy returns empty response with status 200.
-> - if you change response body remember to drop `content-length` header and add/update `content-type` header, otherwise request handler will panic due to response inconsistency.
+> - the default behavior of those overrides is to pass original content of body and headers and status.
+    But for all `*_override` strategies defaults is empty body,
+    empty headers and status 200. So if you need to create exactly
+    new response instead of the one obtained from some target, you can (or have to) define those overrides.
+    If you omit this config than `*_override` strategy returns empty response with status 200.
+> - if you change response body remember to drop `content-length` header and add/update `content-type` header, otherwise
+    request handler will panic due to response inconsistency.
 
 ### Huge configuration example
 
 Below is an example of almost all possible configuration parameters with some explanations.
-
 
 ```yaml
 listeners:
