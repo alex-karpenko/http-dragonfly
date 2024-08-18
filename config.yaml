@@ -1,3 +1,4 @@
 listeners:
-  - targets:
-    - url: https://www.google.com/
+  - strategy: failed_then_ok
+    targets:
+      - url: https://www.google.com/

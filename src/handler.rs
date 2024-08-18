@@ -4,12 +4,7 @@ use http_body_util::{BodyExt, Full};
 use hyper::{
     body::{Bytes, Incoming},
     header::HOST,
-    http, /*Error as HyperError, */ Request, Response, StatusCode, Uri,
-};
-use hyper_tls::HttpsConnector;
-use hyper_util::{
-    client::legacy::{connect::HttpConnector, Client},
-    rt::TokioExecutor,
+    http, Request, Response, StatusCode, Uri,
 };
 use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
@@ -204,14 +199,10 @@ impl RequestHandler {
                 target_request
             );
 
-            // Make a connector
-            let mut http_connector = HttpConnector::new();
-            http_connector.set_connect_timeout(Some(target.timeout()));
-            http_connector.enforce_http(false);
-            let http_connector = HttpsConnector::new_with_connector(http_connector);
-            let http_client = Client::builder(TokioExecutor::default()).build(http_connector);
+            // Prepare target request
+            let http_client = target.https_client(self.listener_cfg.tls());
             let http_request = http_client.request(target_request);
-            let http_request = tokio::time::timeout(target.timeout(), http_request);
+            let http_request = tokio::time::timeout(target.timeout().clone(), http_request);
 
             target_requests.push(tokio::spawn(http_request));
             target_ctx.push(ctx);

@@ -1,5 +1,7 @@
 mod common;
 
+use std::env;
+
 use crate::common::run_test_with_config;
 use futures_util::future::join_all;
 use reqwest::{header::HeaderValue, Client};
@@ -297,6 +299,10 @@ async fn test_one_strategy(client: &Client, test_config: TestConfig) {
 
 #[tokio::test]
 async fn basic_functionality() {
+    if env::var("RUST_LOG").is_ok() {
+        tracing_subscriber::fmt::init();
+    }
+
     let result = run_test_with_config(TEST_CONFIG_PATH, 3000, 60, async {
         let client = reqwest::Client::new();
         let tasks: Vec<_> = prepare_test_cases()

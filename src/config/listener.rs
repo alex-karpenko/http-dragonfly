@@ -43,6 +43,24 @@ pub struct ListenerConfig {
     targets: TargetConfigList,
     #[serde(default)]
     response: ResponseConfig,
+    #[serde(default)]
+    tls: TlsConfig,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TlsConfig {
+    #[serde(default)]
+    pub verify: TlsVerifyConfig,
+    pub ca: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "lowercase")]
+pub enum TlsVerifyConfig {
+    No,
+    #[default]
+    Yes,
 }
 
 impl ListenerConfig {
@@ -105,6 +123,10 @@ impl ListenerConfig {
 
     pub fn on(&self) -> String {
         format!("{}", self.listen_on)
+    }
+
+    pub fn tls(&self) -> &TlsConfig {
+        &self.tls
     }
 
     fn validate_strategy(&self) -> Result<(), HttpDragonflyError> {

@@ -1,0 +1,10 @@
+.git/
+.github/
+target/
+tests/
+*.yaml
+*.yml
+*.md
+*.snap
+mutants.out/
+mutants.out.old/

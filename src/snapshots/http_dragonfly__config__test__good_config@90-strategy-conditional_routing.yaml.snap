@@ -1,6 +1,6 @@
 ---
 source: src/config.rs
-expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
 input_file: tests/configs/good/90-strategy-conditional_routing.yaml
 ---
 Ok(
@@ -30,6 +30,7 @@ Ok(
                         condition: Some(
                             Default,
                         ),
+                        tls: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -163,6 +164,7 @@ Ok(
                                 },
                             ),
                         ),
+                        tls: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -296,6 +298,7 @@ Ok(
                                 },
                             ),
                         ),
+                        tls: None,
                     },
                 ],
                 response: ResponseConfig {
@@ -303,6 +306,10 @@ Ok(
                     failed_status_regex: "4\\d{2}|5\\d{2}",
                     no_targets_status: 500,
                     override_config: None,
+                },
+                tls: TlsConfig {
+                    verify: Yes,
+                    ca: None,
                 },
             },
         ],

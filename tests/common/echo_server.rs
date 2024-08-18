@@ -20,7 +20,7 @@ pub async fn echo_server(port: u16) -> Result<(), Error> {
     let socket = SocketAddr::new(ip.into(), port);
     let listener = TcpListener::bind(&socket)
         .await
-        .expect("unable to create health check listener");
+        .expect("unable to create echo server listener");
     let mut signal_handler = SignalHandler::new("health");
     let mut join_set = JoinSet::new();
 

@@ -69,6 +69,7 @@ Ok(
                             555,
                         ),
                         condition: None,
+                        tls: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -202,6 +203,7 @@ Ok(
                                 },
                             ),
                         ),
+                        tls: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -231,6 +233,7 @@ Ok(
                         on_error: Propagate,
                         error_status: None,
                         condition: None,
+                        tls: None,
                     },
                 ],
                 response: ResponseConfig {
@@ -262,7 +265,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.2.10",
+                                            "0.3.0",
                                         ),
                                     },
                                     HeaderTransform {
@@ -277,6 +280,10 @@ Ok(
                             ),
                         },
                     ),
+                },
+                tls: TlsConfig {
+                    verify: Yes,
+                    ca: None,
                 },
             },
         ],

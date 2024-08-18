@@ -5,7 +5,7 @@ expression: get_test_ctx()
 Context(
   own: {
     "CTX_APP_NAME": "http-dragonfly",
-    "CTX_APP_VERSION": "0.2.10",
+    "CTX_APP_VERSION": "0.3.0",
     "TEST_ENV_HEADER_TO_ADD": "TEST_ENV_HEADER_VALUE",
     "TEST_ENV_KEY": "TEST_ENV_VALUE",
   },

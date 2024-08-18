@@ -6,3 +6,8 @@ config*.yaml
 
 values*.yaml
 TODO*
+
+*.pem
+
+mutants.out/
+mutants.out.old/
