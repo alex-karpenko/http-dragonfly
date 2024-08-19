@@ -281,6 +281,37 @@ Each listener accepts connections on its own IP and port.
 If you have more than one listener in the config,
 you have to specify this parameter at least for all non-default listeners.
 
+#### Listener: `tls`
+
+Format: object with two fields: `verify` and `ca`.
+
+Default:
+```yaml
+  tls:
+    verify: yes
+    ca: null
+```
+
+This object specifies how to treat outgoing TLS connections. `verify` field sets server certificate verification mode, possible values:
+- `yes`: verify server certificate (validity and hostname), default;
+- `no`: skip TLS verification, generally this is a dangerous setup.
+
+`ca` field is used to specify path to the file with custom root CA certificates bundle in PEM format to use instead of the system one.
+
+So the default TLS verification behavior is:
+- skip TLS verification if it's disabled in listener or target config (`tls.verify: no`);
+- else, use custom root CA certificate bundle (file in PEM format) if it's defined in listener or target config
+  (`tls.verify: yes` and `tls.ca` has a path to the file);
+- else, use OS native certificates bundle if it's present;
+- else, use Mozilla root CA bundle.
+
+Example:
+```yaml
+tls:
+  verify: yes
+  ca: /custom_ca.pem
+```
+
 #### Listener: `timeout`
 
 Format: human readable time interval, like `5s`, `1m30s`, etc.
@@ -397,6 +428,8 @@ Target config includes the following parameters:
 
 - `id`: unique (among the listener's targets) target name/ID, default is `TARGET-<url>`
 - `url`: full URL of the target
+- `tls`: the same as [listener TLS config](#listener-tls), by default listeners' config is user, but if it's defined on
+  target level it overrides listeners' values
 - `headers`: target's headers transformations, [like request's config](#listener-headers), empty by default
 - `body`: create new body if defined, or pass original body by default
 - `timeout`: time to wait for response from the target, [like listener's config](#listener-timeout), default is `60s`
