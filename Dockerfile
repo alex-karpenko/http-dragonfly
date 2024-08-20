@@ -8,9 +8,7 @@ RUN cargo build --release
 RUN strip target/release/http-dragonfly
 
 # Runtime stage
-FROM debian:12-slim
-
-RUN apt update && apt install -y ca-certificates && apt clean
+FROM gcr.io/distroless/cc-debian12
 
 USER nobody
 WORKDIR /app

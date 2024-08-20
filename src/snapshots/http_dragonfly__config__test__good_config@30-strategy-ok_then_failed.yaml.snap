@@ -1,6 +1,6 @@
 ---
 source: src/config.rs
-expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
 input_file: tests/configs/good/30-strategy-ok_then_failed.yaml
 ---
 Ok(
@@ -26,6 +26,7 @@ Ok(
                         on_error: Propagate,
                         error_status: None,
                         condition: None,
+                        tls: None,
                     },
                 ],
                 response: ResponseConfig {
@@ -33,6 +34,10 @@ Ok(
                     failed_status_regex: "4\\d{2}|5\\d{2}",
                     no_targets_status: 500,
                     override_config: None,
+                },
+                tls: TlsConfig {
+                    verify: Yes,
+                    ca: None,
                 },
             },
         ],

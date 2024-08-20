@@ -16,60 +16,60 @@ listeners:
     listen_on: "*:8000"
     strategy: failed_then_ok
     targets:
-    - url: http://localhost:3000/${CTX_REQUEST_HEADERS_X_DELAY}
-      timeout: 1s
-      body: "GOOD"
-      headers:
-        - drop: content-length
-        - add: X-Path
-          value: ${CTX_REQUEST_PATH}
+      - url: http://localhost:3000/${CTX_REQUEST_HEADERS_X_DELAY}
+        timeout: 1s
+        body: "GOOD"
+        headers:
+          - drop: content-length
+          - add: X-Path
+            value: ${CTX_REQUEST_PATH}
 
   # Failed first, ok
   - id: three-targets-8001
     listen_on: "*:8001"
     strategy: failed_then_ok
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # Failed first, target id
   - id: three-targets-8002
     listen_on: "*:8002"
     strategy: failed_then_target_id
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       target_selector: GOOD
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # Failed first, override
   - id: three-targets-8003
@@ -78,72 +78,72 @@ listeners:
     headers:
       - drop: content-length
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # ok first, failed
   - id: three-targets-8004
     listen_on: "*:8004"
     strategy: ok_then_failed
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # ok first, target_id
   - id: three-targets-8005
     listen_on: "*:8005"
     strategy: ok_then_target_id
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       target_selector: WRONG
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # ok first, override
   - id: three-targets-8006
@@ -152,49 +152,49 @@ listeners:
     headers:
       - drop: content-length
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # always, target_id
   - id: three-targets-8007
     listen_on: "*:8007"
     strategy: always_target_id
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       target_selector: GOOD
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # always, override
   - id: three-targets-8008
@@ -203,25 +203,25 @@ listeners:
     headers:
       - drop: content-length
     targets:
-    - id: "GOOD"
-      url: http://localhost:3000/
-      body: GOOD
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "WRONG"
-      url: http://localhost:65535/
-      body: WRONG
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "TIMEOUT"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: TIMEOUT
-      condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "GOOD"
+        url: http://localhost:3000/
+        body: GOOD
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "WRONG"
+        url: http://localhost:65535/
+        body: WRONG
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "TIMEOUT"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: TIMEOUT
+        condition: .request.headers["x-include-timeout"] == "yes"
     response:
       override:
         status: 222
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # conditional_routing
   - id: conditional-8009
@@ -230,28 +230,28 @@ listeners:
     headers:
       - drop: content-length
     targets:
-    - id: "1"
-      url: http://localhost:3000/
-      body: "1"
-      condition: .request.headers["x-include-good"] == "yes"
-    - id: "2"
-      url: http://localhost:65535/
-      body: "2"
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-    - id: "3"
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: "3"
-      condition: .request.headers["x-include-timeout"] == "yes"
-    - id: default
-      url: http://localhost:3000/
-      body: default
-      condition: default
+      - id: "1"
+        url: http://localhost:3000/
+        body: "1"
+        condition: .request.headers["x-include-good"] == "yes"
+      - id: "2"
+        url: http://localhost:65535/
+        body: "2"
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+      - id: "3"
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: "3"
+        condition: .request.headers["x-include-timeout"] == "yes"
+      - id: default
+        url: http://localhost:3000/
+        body: default
+        condition: default
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
 
   # conditional_routing, with different statuses
   - id: conditional-8010
@@ -260,25 +260,25 @@ listeners:
     headers:
       - drop: content-length
     targets:
-    - id: timeout_with_555_status
-      timeout: 1s
-      url: http://localhost:3000/2
-      body: "timeout_with_555_status"
-      condition: .request.headers["x-include-timeout"] == "yes"
-      on_error: status
-      error_status: 555
-    - id: wrong_port_with_dropped_status
-      timeout: 1s
-      url: http://localhost:65535/
-      body: "wrong_port_with_dropped_status"
-      condition: .request.headers["x-include-wrong-port"] == "yes"
-      on_error: drop
-    - id: default
-      url: http://localhost:3000/
-      body: default
-      condition: default
+      - id: timeout_with_555_status
+        timeout: 1s
+        url: http://localhost:3000/2
+        body: "timeout_with_555_status"
+        condition: .request.headers["x-include-timeout"] == "yes"
+        on_error: status
+        error_status: 555
+      - id: wrong_port_with_dropped_status
+        timeout: 1s
+        url: http://localhost:65535/
+        body: "wrong_port_with_dropped_status"
+        condition: .request.headers["x-include-wrong-port"] == "yes"
+        on_error: drop
+      - id: default
+        url: http://localhost:3000/
+        body: default
+        condition: default
     response:
       override:
         headers:
-        - add: x-target-id
-          value: ${CTX_TARGET_ID}
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}

@@ -50,7 +50,8 @@ Actually use cases are restricted by your fantasy only :)
 
 The easiest way to run `http-dragonfly` is to use [Docker image](#docker-image).
 If you use Kubernetes to run workload, you can use [Helm chart](#helm-chart) to configure and deploy `http-dragonfly`.
-The third way to run `http-dragonfly` is to [build native Rust binary](#build-your-own-binary) using Cargo utility and run it.
+The third way to run `http-dragonfly` is to [build native Rust binary](#build-your-own-binary) using Cargo utility and
+run it.
 
 Anyway, to run `http-dragonfly` we need a [configuration file](#concepts-and-configuration) with listeners, targets,
 transformations and response strategy configured.
@@ -90,7 +91,8 @@ Options:
 ```
 
 The only mandatory parameter is a path to configuration file.
-Detailed explanation of all possible configuration options is in the dedicated [Concepts and Configuration](#concepts-and-configuration) section.
+Detailed explanation of all possible configuration options is in the
+dedicated [Concepts and Configuration](#concepts-and-configuration) section.
 Just for test purpose, there is
 an [example minimal config](config.yaml) file to listen on default 8080 port and forward requests
 to <http://www.google.com/>.
@@ -200,7 +202,7 @@ Just a few examples of how to use contexts:
 There are four contexts depending on the query stage:
 
 | Context type | Variables                                    | Description                                                                                                                           |
-| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+|--------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | Application  | CTX_APPLICATION_NAME                         | Name of this app, `http-dragonfly`                                                                                                    |
 |              | CTX_APPLICATION_VERSION                      | Version of the app                                                                                                                    |
 |              | OS environment variables                     | All OS environment variables which names satisfy restriction mask from the command line (default mask is `^HTTP_ENV_[a-zA-Z0-9_]+$]`) |
@@ -281,6 +283,42 @@ Each listener accepts connections on its own IP and port.
 If you have more than one listener in the config,
 you have to specify this parameter at least for all non-default listeners.
 
+#### Listener: `tls`
+
+Format: object with two fields: `verify` and `ca`.
+
+Default:
+
+```yaml
+  tls:
+    verify: yes
+    ca: null
+```
+
+This object specifies how to process outgoing TLS connections.
+`verify` field sets server certificate verification mode, possible values:
+- `yes`: verify server certificate (validity and hostname), default;
+- `no`: skip TLS verification, generally this is a dangerous setup.
+
+`ca` field is used to specify a path to the file with custom root CA certificates bundle in PEM format to use instead of
+the system one.
+
+So the default TLS verification behavior is:
+
+- skip TLS verification if it's disabled in listener or target config (`tls.verify: no`);
+- else, use a custom root CA certificate bundle (file in PEM format) if it's defined in listener or target config
+  (`tls.verify: yes` and `tls.ca` has a path to the file);
+- else, use OS native certificates bundle if it's present;
+- else, use Mozilla root CA bundle.
+
+Example:
+
+```yaml
+tls:
+  verify: yes
+  ca: /custom_ca.pem
+```
+
 #### Listener: `timeout`
 
 Format: human readable time interval, like `5s`, `1m30s`, etc.
@@ -328,7 +366,7 @@ Generally, all strategies can be divided into four groups by prefixes:
   response.
 
 | Strategy name         | How it works                                                                                                                                                                                                                                                                                                                  |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | always_override       | Query all allowed targets (see explanation of allowed targets below the table) but return response defined in `response.override` section (see below)                                                                                                                                                                         |
 | always_target_id      | Query all allowed targets but return response from one specific target regardless of it's status                                                                                                                                                                                                                              |
 | ok_then_failed        | Query all allowed targets, if at least on response is successful - return any successful one, if all responses are failed - return any failed response                                                                                                                                                                        |
@@ -397,6 +435,10 @@ Target config includes the following parameters:
 
 - `id`: unique (among the listener's targets) target name/ID, default is `TARGET-<url>`
 - `url`: full URL of the target
+- `tls`: the same as [listener TLS config](#listener-tls), by default listeners' config is used, but if it's defined on
+  the target level, it overrides listeners' values.
+  Be careful: if you disabled TLS verification of listener but need to use
+  custom root CA certificate on target, then you have to enable TLS verification on target.
 - `headers`: target's headers transformations, [like request's config](#listener-headers), empty by default
 - `body`: create new body if defined, or pass original body by default
 - `timeout`: time to wait for response from the target, [like listener's config](#listener-timeout), default is `60s`

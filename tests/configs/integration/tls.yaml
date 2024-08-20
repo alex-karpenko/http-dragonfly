@@ -1,0 +1,104 @@
+# Requires TLS echo server on port 3001
+
+# 9000 - fails due to unknown cert
+# 9001 - disabled tls verification
+# 9002 - use custom listener CA bundle
+# 9003 - use custom listener CA w/o intermediate
+# 9004 - disabled target tls verification
+# 9005 - valid target cert bundle
+
+listeners:
+  # fails due to unknown cert
+  - id: basic-forwarding-9000
+    listen_on: "*:9000"
+    strategy: failed_then_ok
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+
+  # disabled tls verification
+  - id: disabled-tls-verification-9001
+    listen_on: "*:9001"
+    tls:
+      verify: no
+    strategy: ok_then_failed
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: GOOD
+    response:
+      override:
+        headers:
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
+
+  # use custom listener CA bundle
+  - id: use-custom-ca-bundle-9002
+    listen_on: "*:9002"
+    tls:
+      ca: tests/tls/ca.pem
+    strategy: failed_then_ok
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: GOOD
+        headers:
+          - drop: content-length
+          - add: X-Path
+            value: ${CTX_REQUEST_PATH}
+    response:
+      override:
+        headers:
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
+
+  # use custom listener CA w/o intermediate
+  - id: use-custom-ca-9003
+    listen_on: "*:9003"
+    tls:
+      ca: tests/tls/ca.crt
+    strategy: failed_then_ok
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: GOOD
+        headers:
+          - drop: content-length
+          - add: X-Path
+            value: ${CTX_REQUEST_PATH}
+    response:
+      override:
+        headers:
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
+
+  # disabled target tls verification
+  - id: disabled-target-tls-verification-9004
+    listen_on: "*:9004"
+    strategy: ok_then_failed
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: WRONG
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: GOOD
+        tls:
+          verify: no
+    response:
+      override:
+        headers:
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}
+
+  # valid target cert bundle
+  - id: valid-target-cert-9005
+    listen_on: "*:9005"
+    strategy: ok_then_failed
+    targets:
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: WRONG
+      - url: https://localhost:3001/${CTX_REQUEST_HEADERS_X_DELAY}
+        id: GOOD
+        tls:
+          verify: yes
+          ca: tests/tls/ca.pem
+    response:
+      override:
+        headers:
+          - add: x-target-id
+            value: ${CTX_TARGET_ID}

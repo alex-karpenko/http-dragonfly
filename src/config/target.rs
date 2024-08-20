@@ -1,7 +1,23 @@
-use super::{headers::HeaderTransform, response::ResponseStatus, ConfigValidator};
+use super::{
+    headers::HeaderTransform,
+    listener::{TlsConfig, TlsVerifyConfig},
+    response::ResponseStatus,
+    ConfigValidator,
+};
 use crate::{context::Context, errors::HttpDragonflyError};
+use http_body_util::Full;
 use hyper::{body::Bytes, http::request::Parts, Uri};
+use hyper_rustls::HttpsConnectorBuilder;
+use hyper_util::{
+    client::legacy::{connect::HttpConnector, Client},
+    rt::TokioExecutor,
+};
 use jaq_interpret::{Ctx, Filter, FilterT, ParseCtx, RcIter, Val};
+use rustls::{
+    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    pki_types::CertificateDer,
+    ClientConfig, RootCertStore, SignatureScheme,
+};
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
@@ -9,6 +25,9 @@ use serde::{
 use serde_json::{json, value::Value as JsonValue, Value};
 use std::{
     collections::{HashMap, HashSet},
+    fs::File,
+    io::BufReader,
+    sync::{Arc, LazyLock, RwLock},
     time::Duration,
 };
 use tracing::{debug, error};
@@ -16,6 +35,7 @@ use tracing::{debug, error};
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 
 pub type TargetConfigList = Vec<TargetConfig>;
+type HttpsClient = Client<hyper_rustls::HttpsConnector<HttpConnector>, Full<Bytes>>;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -33,6 +53,8 @@ pub struct TargetConfig {
     on_error: TargetOnErrorAction,
     error_status: Option<ResponseStatus>,
     condition: Option<TargetConditionConfig>,
+    #[serde(default)]
+    tls: Option<TlsConfig>,
 }
 
 impl TargetConfig {
@@ -76,8 +98,8 @@ impl TargetConfig {
         &self.body
     }
 
-    pub fn timeout(&self) -> Duration {
-        self.timeout
+    pub fn timeout(&self) -> &Duration {
+        &self.timeout
     }
 
     pub fn on_error(&self) -> &TargetOnErrorAction {
@@ -90,6 +112,171 @@ impl TargetConfig {
 
     pub fn condition(&self) -> &Option<TargetConditionConfig> {
         &self.condition
+    }
+
+    /// Returns http client with configured (or default) tls config and timeout
+    pub fn https_client(&'static self, default_tls_config: &'static TlsConfig) -> HttpsClient {
+        Self::get_https_client(
+            self.timeout(),
+            self.tls.as_ref().unwrap_or(default_tls_config),
+        )
+    }
+
+    /// Check if client with specified timeout and tls config is present in the cache
+    /// and either:
+    /// - returns clone of the cached one
+    /// - or creates new one, store ith to the cache and returns it
+    fn get_https_client(timeout: &'static Duration, tls_config: &'static TlsConfig) -> HttpsClient {
+        type HashKey = (&'static Duration, &'static TlsConfig);
+        static CACHE: LazyLock<RwLock<HashMap<HashKey, HttpsClient>>> =
+            LazyLock::new(|| RwLock::new(HashMap::new()));
+
+        let key = (timeout, tls_config);
+
+        debug!(key = ?key, "get https client");
+        let client = if CACHE.read().unwrap().get(&key).is_some() {
+            debug!(key = ?key, "get https client: found in cache");
+            let cached = CACHE.read().unwrap();
+            cached.get(&key).unwrap().clone()
+        } else {
+            {
+                let mut cache = CACHE.write().unwrap();
+                let client = Self::create_https_client(timeout, tls_config).unwrap();
+                cache.insert(key, client);
+                debug!(key = ?key, "get https client: put into the cache");
+            }
+            Self::get_https_client(timeout, tls_config)
+        };
+
+        client
+    }
+
+    /// Creates http client with specified timeout and tls config
+    fn create_https_client(
+        timeout: &Duration,
+        tls_config: &TlsConfig,
+    ) -> Result<HttpsClient, hyper::Error> {
+        let mut http_connector = HttpConnector::new();
+        http_connector.set_connect_timeout(Some(*timeout));
+        http_connector.enforce_http(false);
+
+        let https_connector = match tls_config.verify {
+            TlsVerifyConfig::No => {
+                debug!("TLS verification disabled");
+                HttpsConnectorBuilder::default().with_tls_config(Self::get_dangerous_tls_config()?)
+            }
+            TlsVerifyConfig::Yes => {
+                debug!("TLS verification enabled");
+                if let Some(ca) = tls_config.ca.as_ref() {
+                    debug!(pem = %ca, "use custom Root CA bundle");
+                    HttpsConnectorBuilder::default()
+                        .with_tls_config(Self::get_custom_ca_tls_config(ca)?)
+                } else if let Ok(connector) = HttpsConnectorBuilder::default().with_native_roots() {
+                    debug!("use native Root CA bundle");
+                    connector
+                } else {
+                    debug!("no native CA config found, use Mozilla Root CA bundle");
+                    HttpsConnectorBuilder::default().with_webpki_roots()
+                }
+            }
+        };
+
+        let https_connector = https_connector
+            .https_or_http()
+            .enable_http1()
+            .wrap_connector(http_connector);
+
+        let https_client = Client::builder(TokioExecutor::default()).build(https_connector);
+        Ok(https_client)
+    }
+
+    fn get_dangerous_tls_config() -> Result<ClientConfig, hyper::Error> {
+        let store = RootCertStore::empty();
+
+        let mut config = ClientConfig::builder()
+            .with_root_certificates(store)
+            .with_no_client_auth();
+
+        // this completely disables cert-verification
+        let mut dangerous_config = ClientConfig::dangerous(&mut config);
+        dangerous_config.set_certificate_verifier(Arc::new(NoCertificateVerification {}));
+
+        Ok(config)
+    }
+
+    fn get_custom_ca_tls_config(ca_path: impl Into<String>) -> Result<ClientConfig, hyper::Error> {
+        let cert_file = File::open(ca_path.into()).unwrap();
+        let cert_file_reader = &mut BufReader::new(cert_file);
+        let certs: Vec<CertificateDer> = rustls_pemfile::certs(cert_file_reader)
+            .map(|c| c.expect("Failed to parse a certificate from the certificate file."))
+            .collect();
+        assert!(
+            !certs.is_empty(),
+            "No certificates were found in the certificate file."
+        );
+
+        let mut store = RootCertStore::empty();
+        for cert in certs {
+            store.add(cert).unwrap();
+        }
+
+        let config = ClientConfig::builder()
+            .with_root_certificates(store)
+            .with_no_client_auth();
+
+        Ok(config)
+    }
+}
+
+#[derive(Debug)]
+struct NoCertificateVerification {}
+
+impl ServerCertVerifier for NoCertificateVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &rustls::pki_types::CertificateDer<'_>,
+        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
+        _server_name: &rustls::pki_types::ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: rustls::pki_types::UnixTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &rustls::pki_types::CertificateDer<'_>,
+        _dss: &rustls::DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &rustls::pki_types::CertificateDer<'_>,
+        _dss: &rustls::DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        vec![
+            SignatureScheme::RSA_PKCS1_SHA1,
+            SignatureScheme::ECDSA_SHA1_Legacy,
+            SignatureScheme::RSA_PKCS1_SHA256,
+            SignatureScheme::ECDSA_NISTP256_SHA256,
+            SignatureScheme::RSA_PKCS1_SHA384,
+            SignatureScheme::ECDSA_NISTP384_SHA384,
+            SignatureScheme::RSA_PKCS1_SHA512,
+            SignatureScheme::ECDSA_NISTP521_SHA512,
+            SignatureScheme::RSA_PSS_SHA256,
+            SignatureScheme::RSA_PSS_SHA384,
+            SignatureScheme::RSA_PSS_SHA512,
+            SignatureScheme::ED25519,
+            SignatureScheme::ED448,
+        ]
     }
 }
 
@@ -321,6 +508,7 @@ pub mod test_target {
             on_error: TargetOnErrorAction::Propagate,
             error_status: None,
             condition: Some(TargetConditionConfig::Default),
+            tls: Default::default(),
         }
     }
 }
