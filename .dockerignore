@@ -2,6 +2,7 @@
 .github/
 target/
 tests/
+!tests/scripts/
 *.yaml
 *.yml
 *.md
