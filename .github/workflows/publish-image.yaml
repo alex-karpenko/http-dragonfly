@@ -1,7 +1,8 @@
 name: Build/push image
 on:
+  workflow_dispatch:
   push:
-    tags: ["v*.*.*"]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
