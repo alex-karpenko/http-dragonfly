@@ -8,6 +8,9 @@ values*.yaml
 TODO*
 
 *.pem
+*.key
+*.crt
+*.req
 
 mutants.out/
 mutants.out.old/

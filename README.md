@@ -428,8 +428,9 @@ Target config includes the following parameters:
 
 - `id`: unique (among the listener's targets) target name/ID, default is `TARGET-<url>`
 - `url`: full URL of the target
-- `tls`: the same as [listener TLS config](#listener-tls), by default listeners' config is user, but if it's defined on
-  target level it overrides listeners' values
+- `tls`: the same as [listener TLS config](#listener-tls), by default listeners' config is used, but if it's defined on
+  the target level, it overrides listeners' values. Be careful: if you disabled TLS verification of listener but need to use
+  custom root CA certificate on target, then you have to enable TLS verification on target.
 - `headers`: target's headers transformations, [like request's config](#listener-headers), empty by default
 - `body`: create new body if defined, or pass original body by default
 - `timeout`: time to wait for response from the target, [like listener's config](#listener-timeout), default is `60s`

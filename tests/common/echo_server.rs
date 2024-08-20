@@ -2,18 +2,23 @@ use http_body_util::{BodyExt, Full};
 use http_dragonfly::signal::SignalHandler;
 use hyper::body::{Bytes, Incoming};
 use hyper::service::service_fn;
-use hyper::{Error, Request, Response};
+use hyper::{Request, Response};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use hyper_util::server::conn::auto::Builder;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::ServerConfig;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{convert::Infallible, net::Ipv4Addr};
+use std::{fs, io};
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::task::JoinSet;
+use tokio_rustls::TlsAcceptor;
 use tracing::{debug, error, info, warn};
 
-pub async fn echo_server(port: u16) -> Result<(), Error> {
+pub async fn echo_server(port: u16) -> Result<(), io::Error> {
     info!("create echo server on port: {}", port);
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
@@ -61,6 +66,84 @@ pub async fn echo_server(port: u16) -> Result<(), Error> {
     tokio::task::spawn(server).await.unwrap()
 }
 
+pub async fn tls_echo_server(
+    port: u16,
+    cert: impl Into<String>,
+    key: impl Into<String>,
+) -> Result<(), io::Error> {
+    info!("create tls echo server on port: {}", port);
+
+    // Set a process wide default crypto provider.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
+    let ip = Ipv4Addr::new(0, 0, 0, 0);
+    let socket = SocketAddr::new(ip.into(), port);
+
+    // Load public certificate.
+    let certs = load_certs(&cert.into())?;
+    // Load private key.
+    let key = load_private_key(&key.into())?;
+
+    let listener = TcpListener::bind(&socket)
+        .await
+        .expect("unable to create echo server listener");
+
+    // Build TLS configuration.
+    let mut server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)
+        .map_err(|e| error(e.to_string()))?;
+    server_config.alpn_protocols = vec![b"http/1.1".to_vec(), b"http/1.0".to_vec()];
+    let tls_acceptor = TlsAcceptor::from(Arc::new(server_config));
+
+    let mut signal_handler = SignalHandler::new("health");
+    let mut join_set = JoinSet::new();
+    let service = service_fn(handle_request);
+
+    let server = async move {
+        loop {
+            select! {
+                biased;
+                _ = signal_handler.wait() => {
+                    while (join_set.join_next().await).is_some() {};
+                    break;
+                },
+                accepted = listener.accept() => {
+                    let (stream, addr) = match accepted {
+                        Ok(x) => x,
+                        Err(e) => {
+                            warn!(error = %e, "failed to accept connection");
+                            continue;
+                        }
+                    };
+
+                    let tls_acceptor = tls_acceptor.clone();
+                    let serve_connection = async move {
+                        let tls_stream = match tls_acceptor.accept(stream).await {
+                            Ok(tls_stream) => tls_stream,
+                            Err(err) => {
+                                error!(error = ?err, address = %addr, "failed to perform tls handshake");
+                                return;
+                            }
+                        };
+                        if let Err(err) = Builder::new(TokioExecutor::new())
+                            .serve_connection(TokioIo::new(tls_stream), service)
+                            .await
+                        {
+                            error!(error = ?err, address = %addr, "failed to serve tls connection");
+                        }
+                    };
+
+                    join_set.spawn(serve_connection);
+                }
+            }
+        }
+        Ok(())
+    };
+
+    tokio::task::spawn(server).await.unwrap()
+}
+
 async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     let mut response = Response::new(Full::from(""));
     let echo_headers = response.headers_mut();
@@ -91,4 +174,30 @@ async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>,
     *response.body_mut() = Full::from(body_bytes);
 
     Ok(response)
+}
+
+// Load public certificate from file.
+fn load_certs(filename: &str) -> io::Result<Vec<CertificateDer<'static>>> {
+    // Open certificate file.
+    let certfile = fs::File::open(filename)
+        .map_err(|e| error(format!("failed to open {}: {}", filename, e)))?;
+    let mut reader = io::BufReader::new(certfile);
+
+    // Load and return certificate.
+    rustls_pemfile::certs(&mut reader).collect()
+}
+
+// Load private key from file.
+fn load_private_key(filename: &str) -> io::Result<PrivateKeyDer<'static>> {
+    // Open keyfile.
+    let keyfile = fs::File::open(filename)
+        .map_err(|e| error(format!("failed to open {}: {}", filename, e)))?;
+    let mut reader = io::BufReader::new(keyfile);
+
+    // Load and return a single private key.
+    rustls_pemfile::private_key(&mut reader).map(|key| key.unwrap())
+}
+
+fn error(err: String) -> io::Error {
+    io::Error::new(io::ErrorKind::Other, err)
 }
