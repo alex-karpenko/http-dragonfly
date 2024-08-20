@@ -202,7 +202,7 @@ impl RequestHandler {
             // Prepare target request
             let http_client = target.https_client(self.listener_cfg.tls());
             let http_request = http_client.request(target_request);
-            let http_request = tokio::time::timeout(target.timeout().clone(), http_request);
+            let http_request = tokio::time::timeout(*target.timeout(), http_request);
 
             target_requests.push(tokio::spawn(http_request));
             target_ctx.push(ctx);

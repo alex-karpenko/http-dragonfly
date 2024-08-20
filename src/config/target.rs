@@ -117,7 +117,7 @@ impl TargetConfig {
     /// Returns http client with configured (or default) tls config and timeout
     pub fn https_client(&'static self, default_tls_config: &'static TlsConfig) -> HttpsClient {
         Self::get_https_client(
-            &self.timeout(),
+            self.timeout(),
             self.tls.as_ref().unwrap_or(default_tls_config),
         )
     }
@@ -157,7 +157,7 @@ impl TargetConfig {
         tls_config: &TlsConfig,
     ) -> Result<HttpsClient, hyper::Error> {
         let mut http_connector = HttpConnector::new();
-        http_connector.set_connect_timeout(Some(timeout.clone()));
+        http_connector.set_connect_timeout(Some(*timeout));
         http_connector.enforce_http(false);
 
         let https_connector = match tls_config.verify {
@@ -171,14 +171,12 @@ impl TargetConfig {
                     debug!(pem = %ca, "use custom Root CA bundle");
                     HttpsConnectorBuilder::default()
                         .with_tls_config(Self::get_custom_ca_tls_config(ca)?)
+                } else if let Ok(connector) = HttpsConnectorBuilder::default().with_native_roots() {
+                    debug!("use native Root CA bundle");
+                    connector
                 } else {
-                    if let Ok(connector) = HttpsConnectorBuilder::default().with_native_roots() {
-                        debug!("use native Root CA bundle");
-                        connector
-                    } else {
-                        debug!("no native CA config found, use Mozilla Root CA bundle");
-                        HttpsConnectorBuilder::default().with_webpki_roots()
-                    }
+                    debug!("no native CA config found, use Mozilla Root CA bundle");
+                    HttpsConnectorBuilder::default().with_webpki_roots()
                 }
             }
         };
@@ -213,7 +211,7 @@ impl TargetConfig {
             .map(|c| c.expect("Failed to parse a certificate from the certificate file."))
             .collect();
         assert!(
-            certs.len() > 0,
+            !certs.is_empty(),
             "No certificates were found in the certificate file."
         );
 
