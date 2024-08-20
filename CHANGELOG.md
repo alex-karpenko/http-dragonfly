@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.3.0] - 2024-08-20
 ### Details
 #### Added
 - Implement TLS config with per-listener/target custom root CA bundle by @alex-karpenko in [#16](https://github.com/alex-karpenko/http-dragonfly/pull/16)
@@ -78,7 +78,7 @@ All notable changes to this project will be documented in this file.
 #### Changed
 - First draft implementation by @alex-karpenko in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
-[unreleased]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.10..HEAD
+[0.3.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.10..v0.3.0
 [0.2.10]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.9..v0.2.10
 [0.2.9]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.8..v0.2.9
 [0.2.8]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.7..v0.2.8
