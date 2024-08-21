@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2024-08-21
+### Details
+#### Changed
+- Refactor to improve error handling by @alex-karpenko in [#18](https://github.com/alex-karpenko/http-dragonfly/pull/18)
+
 ## [0.3.0] - 2024-08-20
 ### Details
 #### Added
@@ -78,6 +83,7 @@ All notable changes to this project will be documented in this file.
 #### Changed
 - First draft implementation by @alex-karpenko in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.3.1]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.0..v0.3.1
 [0.3.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.10..v0.3.0
 [0.2.10]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.9..v0.2.10
 [0.2.9]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.2.8..v0.2.9
