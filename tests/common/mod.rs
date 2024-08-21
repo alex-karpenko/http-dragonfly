@@ -5,7 +5,7 @@ use futures_util::Future;
 use http_dragonfly::{cli::CliConfig, context::RootOsEnvironment};
 use hyper::header::HeaderValue;
 use reqwest::Client;
-use std::{env, io, sync::LazyLock, time::Duration};
+use std::{env, sync::LazyLock, time::Duration};
 
 const SERVER_CERT_BUNDLE: &str = "/end.crt";
 const SERVER_PRIVATE_KEY: &str = "/test-server.key";
@@ -73,7 +73,7 @@ pub async fn run_test_with_config(
 async fn run_test_with_config_and_server(
     config_path: &str,
     timeout_sec: u64,
-    echo_server: impl Future<Output = Result<(), io::Error>>,
+    echo_server: impl Future<Output = Result<(), anyhow::Error>>,
     test: impl Future,
 ) -> Result<(), String> {
     let cli_config = CliConfig::from_config_path(config_path.into());

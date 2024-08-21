@@ -72,3 +72,6 @@ tokio-rustls = { version = "0.26.0", default-features = false, features = [
     "ring",
     "tls12",
 ] }
+
+[build-dependencies]
+anyhow = "1.0.86"

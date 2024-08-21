@@ -173,8 +173,10 @@ impl RequestHandler {
             }
             // Add Host header if empty
             if !headers.contains_key(HOST) {
-                let host: Uri = url.parse()?;
-                let host = host.host().unwrap();
+                let uri: Uri = url.parse()?;
+                let host = uri
+                    .host()
+                    .unwrap_or_else(|| panic!("there is no `host` part in the URI: {uri:?}"));
 
                 debug!("add host header: {host}");
                 headers.insert(HOST, HeaderValue::from_str(host)?);

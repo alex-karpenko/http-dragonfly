@@ -155,7 +155,12 @@ impl<'a> Iterator for ContextIterator<'a> {
             None
         } else if !self.finished {
             self.finished = true;
-            self.iter = Box::new(self.ctx.parent.unwrap().iter());
+            self.iter = Box::new(
+                self.ctx
+                    .parent
+                    .expect("unable to get parent context, looks like a BUG")
+                    .iter(),
+            );
             self.iter.next()
         } else {
             None

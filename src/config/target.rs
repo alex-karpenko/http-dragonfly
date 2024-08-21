@@ -132,14 +132,27 @@ impl TargetConfig {
         let key = (timeout, tls_config);
 
         debug!(key = ?key, "get https client");
-        let client = if CACHE.read().unwrap().get(&key).is_some() {
+        let client = if CACHE
+            .read()
+            .expect("unable to lock cache, looks like a BUG")
+            .get(&key)
+            .is_some()
+        {
             debug!(key = ?key, "get https client: found in cache");
-            let cached = CACHE.read().unwrap();
-            cached.get(&key).unwrap().clone()
+            let cached = CACHE
+                .read()
+                .expect("unable to lock cache, looks like a BUG");
+            cached
+                .get(&key)
+                .expect("unable to get cached client, looks like a BUG")
+                .clone()
         } else {
             {
-                let mut cache = CACHE.write().unwrap();
-                let client = Self::create_https_client(timeout, tls_config).unwrap();
+                let mut cache = CACHE
+                    .write()
+                    .expect("unable to lock cache, looks like a BUG");
+                let client = Self::create_https_client(timeout, tls_config)
+                    .expect("unable to create https client, looks like a BUG");
                 cache.insert(key, client);
                 debug!(key = ?key, "get https client: put into the cache");
             }
@@ -153,7 +166,7 @@ impl TargetConfig {
     fn create_https_client(
         timeout: &Duration,
         tls_config: &TlsConfig,
-    ) -> Result<HttpsClient, hyper::Error> {
+    ) -> Result<HttpsClient, anyhow::Error> {
         let mut http_connector = HttpConnector::new();
         http_connector.set_connect_timeout(Some(*timeout));
         http_connector.enforce_http(false);
@@ -202,8 +215,8 @@ impl TargetConfig {
         Ok(config)
     }
 
-    fn get_custom_ca_tls_config(ca_path: impl Into<String>) -> Result<ClientConfig, hyper::Error> {
-        let cert_file = File::open(ca_path.into()).unwrap();
+    fn get_custom_ca_tls_config(ca_path: impl Into<String>) -> Result<ClientConfig, anyhow::Error> {
+        let cert_file = File::open(ca_path.into())?;
         let cert_file_reader = &mut BufReader::new(cert_file);
         let certs: Vec<CertificateDer> = rustls_pemfile::certs(cert_file_reader)
             .map(|c| c.expect("Failed to parse a certificate from the certificate file."))
@@ -215,7 +228,7 @@ impl TargetConfig {
 
         let mut store = RootCertStore::empty();
         for cert in certs {
-            store.add(cert).unwrap();
+            store.add(cert)?;
         }
 
         let config = ClientConfig::builder()
