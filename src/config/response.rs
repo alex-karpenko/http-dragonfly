@@ -1,3 +1,12 @@
+use super::{
+    headers::{HeaderTransform, HeadersTransformator},
+    ConfigValidator,
+};
+use crate::{
+    config,
+    context::Context,
+    handler::{ResponseResult, ResponsesMap},
+};
 use http_body_util::Full;
 use hyper::{body::Bytes, header::CONTENT_LENGTH, http::Error, Response, StatusCode};
 use regex::Regex;
@@ -5,17 +14,9 @@ use serde::{Deserialize, Serialize};
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
 
-use crate::{
-    context::Context,
-    handler::{ResponseResult, ResponsesMap},
-};
-
-use super::{
-    headers::{HeaderTransform, HeadersTransformator},
-    ConfigValidator,
-};
-
 pub type ResponseStatus = u16;
+
+const UNABLE_TO_CREATE_RESPONSE_ERROR: &str = "unable to create response, looks like a BUG";
 
 #[derive(Deserialize, Debug, Serialize)]
 #[serde(deny_unknown_fields, default)]
@@ -47,7 +48,7 @@ pub struct OverrideConfig {
 }
 
 impl ConfigValidator for ResponseConfig {
-    fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
+    fn validate(&self) -> Result<(), config::ConfigError> {
         Ok(())
     }
 }
@@ -144,7 +145,7 @@ impl ResponseBehavior for ResponseConfig {
             };
 
             // Final response
-            new_resp.body(body).unwrap()
+            new_resp.body(body).expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
         } else {
             resp
         }
@@ -157,9 +158,16 @@ impl ResponseBehavior for ResponseConfig {
     ) -> Option<String> {
         debug!("looking for {:?}", response_kind);
 
-        let re = Regex::new(&self.failed_status_regex).unwrap();
+        let re = Regex::new(&self.failed_status_regex).unwrap_or_else(|_| {
+            panic!(
+                "unable parse regex expression: {}",
+                self.failed_status_regex
+            )
+        });
         for key in responses.keys() {
-            let (resp, _) = responses.get(key).unwrap();
+            let (resp, _) = responses
+                .get(key)
+                .expect("unable to get header value by key, looks like a BUG");
             if let Some(resp) = resp {
                 let status: String = resp.status().to_string();
                 let is_failed = re.is_match(&status);
@@ -208,7 +216,8 @@ impl ResponseBehavior for ResponseConfig {
             }
         };
 
-        resp.body(Full::from(Bytes::new())).unwrap()
+        resp.body(Full::from(Bytes::new()))
+            .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
     }
 
     fn empty_response(&self, status: ResponseStatus) -> Result<Response<Full<Bytes>>, Error> {
@@ -240,7 +249,7 @@ impl ResponseBehavior for ResponseConfig {
     ) -> Response<Full<Bytes>> {
         if let Some(target_id) = first_target_id {
             if let Some((resp, ctx)) = responses.remove(&target_id) {
-                let resp = resp.unwrap();
+                let resp = resp.expect(UNABLE_TO_CREATE_RESPONSE_ERROR);
                 let ctx = ctx.with_response(&resp);
                 self.override_response(resp, &ctx)
             } else {
@@ -252,13 +261,16 @@ impl ResponseBehavior for ResponseConfig {
                     let ctx = ctx.with_response(&resp);
                     self.override_response(resp, &ctx)
                 } else {
-                    self.no_target_response(ctx).unwrap()
+                    self.no_target_response(ctx)
+                        .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
                 }
             } else {
-                self.no_target_response(ctx).unwrap()
+                self.no_target_response(ctx)
+                    .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
             }
         } else {
-            self.no_target_response(ctx).unwrap()
+            self.no_target_response(ctx)
+                .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
         }
     }
 
@@ -270,16 +282,16 @@ impl ResponseBehavior for ResponseConfig {
     ) -> Response<Full<Bytes>> {
         if let Some(target_id) = target_id {
             if let Some((resp, ctx)) = responses.remove(&target_id) {
-                let resp = resp.unwrap();
+                let resp = resp.expect(UNABLE_TO_CREATE_RESPONSE_ERROR);
                 let ctx = ctx.with_response(&resp);
                 self.override_response(resp, &ctx)
             } else {
                 self.override_empty_response(StatusCode::OK.into(), ctx)
-                    .unwrap()
+                    .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
             }
         } else {
             self.override_empty_response(StatusCode::OK.into(), ctx)
-                .unwrap()
+                .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
         }
     }
 
@@ -295,13 +307,16 @@ impl ResponseBehavior for ResponseConfig {
                     let ctx = ctx.with_response(&resp);
                     self.override_response(resp, &ctx)
                 } else {
-                    self.no_target_response(ctx).unwrap()
+                    self.no_target_response(ctx)
+                        .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
                 }
             } else {
-                self.no_target_response(ctx).unwrap()
+                self.no_target_response(ctx)
+                    .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
             }
         } else {
-            self.no_target_response(ctx).unwrap()
+            self.no_target_response(ctx)
+                .expect(UNABLE_TO_CREATE_RESPONSE_ERROR)
         }
     }
 }

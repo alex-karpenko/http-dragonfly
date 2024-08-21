@@ -2,23 +2,45 @@ pub mod headers;
 pub mod listener;
 pub mod response;
 pub mod target;
+
+use crate::context::Context;
+use listener::ListenerConfig;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
 use std::{
     fs::File,
+    io,
     io::{BufReader, Read},
 };
 use tracing::{debug, info};
 
-use crate::{context::Context, errors::HttpDragonflyError};
-
-use self::listener::ListenerConfig;
-
 static APP_CONFIG: OnceCell<AppConfig> = OnceCell::new();
 
+#[derive(thiserror::Error)]
+pub enum ConfigError {
+    #[error("unable to load config: {}", .cause)]
+    LoadConfig {
+        #[from]
+        cause: io::Error,
+    },
+    #[error("unable to parse config: {}", .cause)]
+    ParseConfigFile {
+        #[from]
+        cause: serde_yaml::Error,
+    },
+    #[error("invalid config: {}", .cause)]
+    ValidateConfig { cause: String },
+}
+
+impl std::fmt::Debug for ConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 pub trait ConfigValidator {
-    fn validate(&self) -> Result<(), HttpDragonflyError>;
+    fn validate(&self) -> Result<(), ConfigError>;
 }
 
 #[derive(Deserialize, Debug)]
@@ -28,18 +50,18 @@ pub struct AppConfig {
 }
 
 impl<'a> AppConfig {
-    pub fn new(filename: &String, ctx: &Context) -> Result<&'a AppConfig, HttpDragonflyError> {
+    pub fn new(filename: &String, ctx: &Context) -> Result<&'a AppConfig, ConfigError> {
         let config = AppConfig::from_file(filename, ctx)?;
         Ok(APP_CONFIG.get_or_init(|| config))
     }
 
-    fn from_file(filename: &String, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
+    fn from_file(filename: &String, ctx: &Context) -> Result<AppConfig, ConfigError> {
         info!("Loading config: {filename}");
         let mut file = File::open(filename)?;
         AppConfig::from_reader(&mut file, ctx)
     }
 
-    fn from_reader(reader: &mut dyn Read, ctx: &Context) -> Result<AppConfig, HttpDragonflyError> {
+    fn from_reader(reader: &mut dyn Read, ctx: &Context) -> Result<AppConfig, ConfigError> {
         let mut reader = BufReader::new(reader);
         let mut buf = String::new();
         reader.read_to_string(&mut buf)?;
@@ -59,9 +81,9 @@ impl<'a> AppConfig {
 }
 
 impl ConfigValidator for AppConfig {
-    fn validate(&self) -> Result<(), HttpDragonflyError> {
+    fn validate(&self) -> Result<(), ConfigError> {
         if self.listeners().is_empty() {
-            return Err(HttpDragonflyError::ValidateConfig {
+            return Err(ConfigError::ValidateConfig {
                 cause: String::from("at least one listener must be configured"),
             });
         }
@@ -76,10 +98,10 @@ impl ConfigValidator for AppConfig {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::context::test_context;
     use insta::{assert_debug_snapshot, glob};
-
-    use super::*;
+    use std::io::ErrorKind;
 
     const TEST_CONFIGS_FOLDER: &str = "../tests/configs";
 
@@ -108,5 +130,15 @@ mod test {
             )]},
             {assert_debug_snapshot!(AppConfig::from_file(&String::from(path.to_str().unwrap()),ctx));})
         );
+    }
+
+    #[test]
+    fn errors() {
+        assert_debug_snapshot!(ConfigError::LoadConfig {
+            cause: io::Error::new(ErrorKind::Other, "snapshot test cause")
+        });
+        assert_debug_snapshot!(ConfigError::ValidateConfig {
+            cause: "snapshot test cause".to_string()
+        });
     }
 }

@@ -1,7 +1,7 @@
 use crate::{signal::SignalHandler, HyperTaskJoinHandle};
 use core::time::Duration;
 use http_body_util::Full;
-use hyper::{body::Bytes, service::service_fn, Response};
+use hyper::{body::Bytes, http, service::service_fn, Response};
 use hyper_util::{
     rt::{TokioExecutor, TokioIo, TokioTimer},
     server::conn::auto::Builder,
@@ -13,7 +13,7 @@ use tracing::{debug, error, info, warn};
 /// Health check handler
 ///
 /// Listens to health-check port and responds 200 OK to any GET request
-async fn handle(addr: SocketAddr) -> Result<Response<Full<Bytes>>, hyper::Error> {
+async fn handle(addr: SocketAddr) -> Result<Response<Full<Bytes>>, http::Error> {
     debug!("health check, from={}", addr);
     Ok(Response::new(Full::from(Bytes::from("OK\n"))))
 }

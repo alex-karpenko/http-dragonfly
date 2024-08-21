@@ -1,5 +1,14 @@
+use crate::{
+    config::{
+        headers::HeadersTransformator,
+        listener::{ListenerConfig, ResponseStrategy},
+        response::{ResponseBehavior, ResponseKind},
+        target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
+    },
+    context::Context,
+};
 use futures_util::future::join_all;
-use http::{Error, HeaderValue};
+use http::HeaderValue;
 use http_body_util::{BodyExt, Full};
 use hyper::{
     body::{Bytes, Incoming},
@@ -10,16 +19,6 @@ use shellexpand::env_with_context_no_errors;
 use std::{collections::HashMap, net::SocketAddr};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-
-use crate::{
-    config::{
-        headers::HeadersTransformator,
-        listener::{ListenerConfig, ResponseStrategy},
-        response::{ResponseBehavior, ResponseKind},
-        target::{TargetBehavior, TargetConditionConfig, TargetConfig, TargetOnErrorAction},
-    },
-    context::Context,
-};
 
 pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Full<Bytes>>>, &'a Context<'a>)>;
 pub type HyperError = hyper_util::client::legacy::Error;
@@ -43,7 +42,7 @@ impl RequestHandler {
         self,
         addr: SocketAddr,
         req: Request<Incoming>,
-    ) -> Result<Response<Full<Bytes>>, Error> {
+    ) -> Result<Response<Full<Bytes>>, http::Error> {
         let req_id = Uuid::new_v4();
         info!(
             "{req_id}: accepted from: {}, to: {}, method: {}",
@@ -174,8 +173,10 @@ impl RequestHandler {
             }
             // Add Host header if empty
             if !headers.contains_key(HOST) {
-                let host: Uri = url.parse()?;
-                let host = host.host().unwrap();
+                let uri: Uri = url.parse()?;
+                let host = uri
+                    .host()
+                    .unwrap_or_else(|| panic!("there is no `host` part in the URI: {uri:?}"));
 
                 debug!("add host header: {host}");
                 headers.insert(HOST, HeaderValue::from_str(host)?);

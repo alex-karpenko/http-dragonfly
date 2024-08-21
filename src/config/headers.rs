@@ -1,13 +1,14 @@
-use hyper::header::{HeaderName, HeaderValue};
-use hyper::HeaderMap;
+use crate::context::Context;
+use hyper::{
+    header::{HeaderName, HeaderValue},
+    HeaderMap,
+};
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer, Serialize,
 };
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
-
-use crate::context::Context;
 
 pub type HeadersTransformsList = Vec<HeaderTransform>;
 

@@ -18,7 +18,7 @@ use tokio::task::JoinSet;
 use tokio_rustls::TlsAcceptor;
 use tracing::{debug, error, info, warn};
 
-pub async fn echo_server(port: u16) -> Result<(), io::Error> {
+pub async fn echo_server(port: u16) -> Result<(), anyhow::Error> {
     info!("create echo server on port: {}", port);
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
@@ -63,14 +63,14 @@ pub async fn echo_server(port: u16) -> Result<(), io::Error> {
         Ok(())
     };
 
-    tokio::task::spawn(server).await.unwrap()
+    tokio::task::spawn(server).await?
 }
 
 pub async fn tls_echo_server(
     port: u16,
     cert: impl Into<String>,
     key: impl Into<String>,
-) -> Result<(), io::Error> {
+) -> Result<(), anyhow::Error> {
     info!("create tls echo server on port: {}", port);
 
     // Set a process wide default crypto provider.
@@ -141,7 +141,7 @@ pub async fn tls_echo_server(
         Ok(())
     };
 
-    tokio::task::spawn(server).await.unwrap()
+    tokio::task::spawn(server).await?
 }
 
 async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
