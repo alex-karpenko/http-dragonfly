@@ -1,3 +1,10 @@
+use super::{
+    headers::HeaderTransform,
+    response::{ResponseBehavior, ResponseConfig},
+    target::{TargetConfig, TargetConfigList},
+    ConfigValidator,
+};
+use crate::{config, config::target::TargetConditionConfig, config::ConfigError};
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
@@ -11,15 +18,6 @@ use std::{
 };
 use strum_macros::{Display, EnumString};
 use tracing::debug;
-
-use crate::{config::target::TargetConditionConfig, errors::HttpDragonflyError};
-
-use super::{
-    headers::HeaderTransform,
-    response::{ResponseBehavior, ResponseConfig},
-    target::{TargetConfig, TargetConfigList},
-    ConfigValidator,
-};
 
 const DEFAULT_LISTENER_PORT: u16 = 8080;
 const DEFAULT_LISTENER_TIMEOUT_SEC: u64 = 10;
@@ -129,13 +127,13 @@ impl ListenerConfig {
         &self.tls
     }
 
-    fn validate_strategy(&self) -> Result<(), HttpDragonflyError> {
+    fn validate_strategy(&self) -> Result<(), ConfigError> {
         // Validate strategy requirements
         match self.strategy() {
             ResponseStrategy::ConditionalRouting => {
                 // Make sure that all targets have condition defined if strategy is conditional_routing
                 if self.targets().iter().any(|t| t.condition().is_none()) {
-                    return Err(HttpDragonflyError::ValidateConfig {
+                    return Err(ConfigError::ValidateConfig {
                         cause: format!(
                             "all targets must have condition defined because strategy is `{}`",
                             self.strategy()
@@ -154,7 +152,7 @@ impl ListenerConfig {
                     })
                     .count();
                 if default_count > 1 {
-                    return Err(HttpDragonflyError::ValidateConfig {
+                    return Err(ConfigError::ValidateConfig {
                         cause: "more than one default target is defined but only one is allowed"
                             .into(),
                     });
@@ -167,7 +165,7 @@ impl ListenerConfig {
                 let target_ids: Vec<String> = self.targets().iter().map(TargetConfig::id).collect();
                 if let Some(target_id) = self.response().target_selector() {
                     if !target_ids.contains(target_id) {
-                        return Err(HttpDragonflyError::ValidateConfig {
+                        return Err(ConfigError::ValidateConfig {
                             cause: format!(
                                 "`target_selector` points to unknown target_id `{}`",
                                 target_id
@@ -175,7 +173,7 @@ impl ListenerConfig {
                         });
                     }
                 } else {
-                    return Err(HttpDragonflyError::ValidateConfig {
+                    return Err(ConfigError::ValidateConfig {
                         cause: format!(
                             "`target_selector` should be specified for strategy `{}`",
                             self.strategy()
@@ -315,7 +313,7 @@ impl<'de> Deserialize<'de> for ListenOn {
 }
 
 impl ConfigValidator for ListenerConfig {
-    fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
+    fn validate(&self) -> Result<(), config::ConfigError> {
         self.targets().validate()?;
         self.response().validate()?;
         self.validate_strategy()?;

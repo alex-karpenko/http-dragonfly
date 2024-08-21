@@ -1,0 +1,5 @@
+---
+source: src/config.rs
+expression: "ConfigError::ValidateConfig { cause: \"snapshot test cause\".to_string() }"
+---
+invalid config: snapshot test cause

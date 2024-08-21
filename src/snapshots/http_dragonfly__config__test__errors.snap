@@ -1,0 +1,5 @@
+---
+source: src/config.rs
+expression: "ConfigError::LoadConfig {\n    cause: io::Error::new(ErrorKind::Other, \"snapshot test cause\"),\n}"
+---
+unable to load config: snapshot test cause

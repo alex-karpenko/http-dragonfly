@@ -3,7 +3,6 @@ pub mod config;
 pub mod context;
 pub mod signal;
 
-mod errors;
 mod handler;
 mod health_check;
 
@@ -18,7 +17,7 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use signal::SignalHandler;
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 use tokio::{
     net::TcpListener,
     select,
@@ -26,12 +25,12 @@ use tokio::{
 };
 use tracing::{error, warn};
 
-pub type HyperTaskJoinHandle = JoinHandle<Result<(), hyper::Error>>;
+pub type HyperTaskJoinHandle = JoinHandle<Result<(), anyhow::Error>>;
 
 pub async fn run(
     cli_config: CliConfig,
     env_provider: impl RootEnvironment,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), anyhow::Error> {
     let root_ctx = Arc::new(Context::root(env_provider));
     let app_config = AppConfig::new(&cli_config.config_path(), *root_ctx)?;
     let mut servers: Vec<HyperTaskJoinHandle> = vec![];
@@ -60,7 +59,7 @@ async fn service_loop(
     listener: TcpListener,
     ctx: &'static Context<'static>,
     cfg: &'static ListenerConfig,
-) -> Result<(), hyper::Error> {
+) -> Result<(), anyhow::Error> {
     let mut join_set = JoinSet::new();
 
     let name = cfg.id();

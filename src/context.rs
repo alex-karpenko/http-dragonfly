@@ -1,14 +1,11 @@
+use crate::config::target::TargetConfig;
 use http_body_util::Full;
 use hyper::{body::Bytes, http::request::Parts, Response};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::env;
-use std::net::SocketAddr;
+use std::{collections::HashMap, env, net::SocketAddr};
 use tracing::{debug, info};
-
-use crate::config::target::TargetConfig;
 
 const CTX_APP_NAME: &str = env!("CARGO_PKG_NAME");
 const CTX_APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -205,13 +202,11 @@ impl<'a> RootOsEnvironment<'a> {
 
 #[cfg(test)]
 pub mod test_context {
+    use super::*;
+    use crate::config::target::test_target::get_test_target;
     use hyper::Request;
     use insta::assert_ron_snapshot;
     use std::net::Ipv4Addr;
-
-    use crate::config::target::test_target::get_test_target;
-
-    use super::*;
 
     const TEST_ENV_KEY: &str = "TEST_ENV_KEY";
     const TEST_ENV_VALUE: &str = "TEST_ENV_VALUE";

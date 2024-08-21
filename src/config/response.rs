@@ -1,19 +1,18 @@
+use super::{
+    headers::{HeaderTransform, HeadersTransformator},
+    ConfigValidator,
+};
+use crate::{
+    config,
+    context::Context,
+    handler::{ResponseResult, ResponsesMap},
+};
 use http_body_util::Full;
 use hyper::{body::Bytes, header::CONTENT_LENGTH, http::Error, Response, StatusCode};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use shellexpand::env_with_context_no_errors;
 use tracing::debug;
-
-use crate::{
-    context::Context,
-    handler::{ResponseResult, ResponsesMap},
-};
-
-use super::{
-    headers::{HeaderTransform, HeadersTransformator},
-    ConfigValidator,
-};
 
 pub type ResponseStatus = u16;
 
@@ -47,7 +46,7 @@ pub struct OverrideConfig {
 }
 
 impl ConfigValidator for ResponseConfig {
-    fn validate(&self) -> Result<(), crate::errors::HttpDragonflyError> {
+    fn validate(&self) -> Result<(), config::ConfigError> {
         Ok(())
     }
 }
