@@ -5,17 +5,17 @@ pub mod target;
 
 use crate::context::Context;
 use listener::ListenerConfig;
-use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use shellexpand::env_with_context_no_errors;
 use std::{
     fs::File,
     io,
     io::{BufReader, Read},
+    sync::OnceLock,
 };
 use tracing::{debug, info};
 
-static APP_CONFIG: OnceCell<AppConfig> = OnceCell::new();
+static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
 
 #[derive(thiserror::Error)]
 pub enum ConfigError {
