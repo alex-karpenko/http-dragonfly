@@ -1,10 +1,9 @@
 use crate::config::target::TargetConfig;
 use http_body_util::Full;
 use hyper::{body::Bytes, http::request::Parts, Response};
-use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Serialize;
-use std::{collections::HashMap, env, net::SocketAddr};
+use std::{collections::HashMap, env, net::SocketAddr, sync::OnceLock};
 use tracing::{debug, info};
 
 const CTX_APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -20,7 +19,7 @@ pub struct Context<'a> {
 
 impl<'a> Context<'a> {
     pub fn root(root_env: impl RootEnvironment) -> &'static Context<'a> {
-        static ROOT_CONTEXT: OnceCell<Context> = OnceCell::new();
+        static ROOT_CONTEXT: OnceLock<Context> = OnceLock::new();
 
         let ctx = ROOT_CONTEXT.get_or_init(|| {
             let mut ctx = ContextMap::new();
