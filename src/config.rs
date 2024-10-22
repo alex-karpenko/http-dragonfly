@@ -49,9 +49,9 @@ pub struct AppConfig {
     listeners: Vec<ListenerConfig>,
 }
 
-impl<'a> AppConfig {
-    pub fn new(filename: &String, ctx: &Context) -> Result<&'a AppConfig, ConfigError> {
-        let config = AppConfig::from_file(filename, ctx)?;
+impl AppConfig {
+    pub fn new<'a>(filename: String, ctx: &'a Context<'a>) -> Result<&'a AppConfig, ConfigError> {
+        let config = AppConfig::from_file(&filename, ctx)?;
         Ok(APP_CONFIG.get_or_init(|| config))
     }
 

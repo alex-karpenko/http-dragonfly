@@ -329,7 +329,7 @@ impl<'de> Deserialize<'de> for TargetConditionConfig {
         D: Deserializer<'de>,
     {
         struct TargetConditionConfigVisitor;
-        impl<'de> Visitor<'de> for TargetConditionConfigVisitor {
+        impl Visitor<'_> for TargetConditionConfigVisitor {
             type Value = TargetConditionConfig;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -505,7 +505,6 @@ impl TargetBehavior for TargetConfig {
 }
 
 #[cfg(test)]
-
 pub mod test_target {
     use super::*;
 
