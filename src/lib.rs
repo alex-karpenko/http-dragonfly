@@ -32,7 +32,7 @@ pub async fn run(
     env_provider: impl RootEnvironment,
 ) -> Result<(), anyhow::Error> {
     let root_ctx = Arc::new(Context::root(env_provider));
-    let app_config = AppConfig::new(&cli_config.config_path(), *root_ctx)?;
+    let app_config = AppConfig::new(cli_config.config_path(), *root_ctx)?;
     let mut servers: Vec<HyperTaskJoinHandle> = vec![];
 
     for cfg in app_config.listeners().iter().map(Arc::new) {

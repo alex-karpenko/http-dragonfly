@@ -293,7 +293,7 @@ impl<'de> Deserialize<'de> for ListenOn {
         D: Deserializer<'de>,
     {
         struct ListenOnVisitor;
-        impl<'de> Visitor<'de> for ListenOnVisitor {
+        impl Visitor<'_> for ListenOnVisitor {
             type Value = ListenOn;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

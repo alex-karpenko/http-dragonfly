@@ -183,7 +183,7 @@ pub struct RootOsEnvironment<'a> {
     env_mask_regex: &'a str,
 }
 
-impl<'a> RootEnvironment for RootOsEnvironment<'a> {
+impl RootEnvironment for RootOsEnvironment<'_> {
     fn get_environment(&self) -> ContextMap {
         let mut env_ctx = ContextMap::new();
         let re = Regex::new(self.env_mask_regex).expect("invalid environment filter regex");
