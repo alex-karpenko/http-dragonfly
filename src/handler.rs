@@ -38,7 +38,7 @@ impl RequestHandler {
         }
     }
 
-    pub async fn handle<'a>(
+    pub async fn handle(
         self,
         addr: SocketAddr,
         req: Request<Incoming>,
