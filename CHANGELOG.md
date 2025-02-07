@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.5] - 2025-02-07
+### Details
+#### Fixed
+- Bump EmbarkStudios/cargo-deny-action to v2 by @alex-karpenko in [#24](https://github.com/alex-karpenko/http-dragonfly/pull/24)
+- Update dependencies to vix security findings by @alex-karpenko in [#25](https://github.com/alex-karpenko/http-dragonfly/pull/25)
+
 ## [0.3.4] - 2025-01-24
 ### Details
 #### Changed
@@ -105,6 +111,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.3.5]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.4..v0.3.5
 [0.3.4]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.3..v0.3.4
 [0.3.3]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.2..v0.3.3
 [0.3.2]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.1..v0.3.2
