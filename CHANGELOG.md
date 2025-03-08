@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.6] - 2025-03-08
+### Details
+#### Fixed
+- Update dependencies to fix security findings by @alex-karpenko in [#27](https://github.com/alex-karpenko/http-dragonfly/pull/27)
+
 ## [0.3.5] - 2025-02-07
 ### Details
 #### Fixed
@@ -111,6 +116,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.3.6]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.5..v0.3.6
 [0.3.5]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.4..v0.3.5
 [0.3.4]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.3..v0.3.4
 [0.3.3]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.2..v0.3.3
