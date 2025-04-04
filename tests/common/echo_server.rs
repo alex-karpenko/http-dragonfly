@@ -1,20 +1,26 @@
 use http_body_util::{BodyExt, Full};
 use http_dragonfly::signal::SignalHandler;
-use hyper::body::{Bytes, Incoming};
-use hyper::service::service_fn;
-use hyper::{Request, Response};
-use hyper_util::rt::{TokioExecutor, TokioIo};
-use hyper_util::server::conn::auto::Builder;
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls::ServerConfig;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
-use std::{convert::Infallible, net::Ipv4Addr};
-use std::{fs, io};
-use tokio::net::TcpListener;
-use tokio::select;
-use tokio::task::JoinSet;
+use hyper::{
+    body::{Bytes, Incoming},
+    service::service_fn,
+    Request, Response,
+};
+use hyper_util::{
+    rt::{TokioExecutor, TokioIo},
+    server::conn::auto::Builder,
+};
+use rustls::{
+    pki_types::{CertificateDer, PrivateKeyDer},
+    ServerConfig,
+};
+use std::{
+    convert::Infallible,
+    fs, io,
+    net::{Ipv4Addr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
+use tokio::{net::TcpListener, select, task::JoinSet};
 use tokio_rustls::TlsAcceptor;
 use tracing::{debug, error, info, warn};
 
@@ -199,5 +205,5 @@ fn load_private_key(filename: &str) -> io::Result<PrivateKeyDer<'static>> {
 }
 
 fn error(err: String) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, err)
+    io::Error::other(err)
 }
