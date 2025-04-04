@@ -101,7 +101,6 @@ mod test {
     use super::*;
     use crate::context::test_context;
     use insta::{assert_debug_snapshot, glob};
-    use std::io::ErrorKind;
 
     const TEST_CONFIGS_FOLDER: &str = "../tests/configs";
 
@@ -135,7 +134,7 @@ mod test {
     #[test]
     fn errors() {
         assert_debug_snapshot!(ConfigError::LoadConfig {
-            cause: io::Error::new(ErrorKind::Other, "snapshot test cause")
+            cause: io::Error::other("snapshot test cause")
         });
         assert_debug_snapshot!(ConfigError::ValidateConfig {
             cause: "snapshot test cause".to_string()
