@@ -1,6 +1,7 @@
 name: Security audit
 on:
   workflow_dispatch:
+  pull_request:
   schedule:
     - cron: "17 5 * * 5"
   push:
