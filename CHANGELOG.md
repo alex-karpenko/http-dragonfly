@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.7] - 2025-04-12
+### Details
+#### Changed
+- Use io::Error::other insteand of ::new in some tests by @alex-karpenko in [#28](https://github.com/alex-karpenko/http-dragonfly/pull/28)
+
+#### Fixed
+- Update dependencies to fix security findings by @alex-karpenko in [#29](https://github.com/alex-karpenko/http-dragonfly/pull/29)
+
 ## [0.3.6] - 2025-03-08
 ### Details
 #### Fixed
@@ -116,6 +124,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.3.7]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.6..v0.3.7
 [0.3.6]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.5..v0.3.6
 [0.3.5]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.4..v0.3.5
 [0.3.4]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.3..v0.3.4
