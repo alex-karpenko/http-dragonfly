@@ -223,8 +223,7 @@ mod tests {
                 serde_json::from_str(test_item);
             assert!(
                 result.is_err(),
-                "unexpected deserialization of `{}`",
-                test_item
+                "unexpected deserialization of `{test_item}`"
             );
         }
     }

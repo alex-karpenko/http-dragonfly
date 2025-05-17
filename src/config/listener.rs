@@ -167,8 +167,7 @@ impl ListenerConfig {
                     if !target_ids.contains(target_id) {
                         return Err(ConfigError::ValidateConfig {
                             cause: format!(
-                                "`target_selector` points to unknown target_id `{}`",
-                                target_id
+                                "`target_selector` points to unknown target_id `{target_id}`"
                             ),
                         });
                     }
@@ -355,8 +354,7 @@ mod tests {
         for wrong_item in wrong_str {
             assert!(
                 ListenOn::from_str(wrong_item).is_err(),
-                "unexpectedly deserialized `{}`",
-                wrong_item
+                "unexpectedly deserialized `{wrong_item}`"
             );
         }
     }

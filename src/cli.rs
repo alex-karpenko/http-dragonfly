@@ -97,8 +97,7 @@ impl CliConfig {
                 }
             }
             Err(e) => Err(format!(
-                "unable to parse `{port}`: {}, it should be number in range 1..65535",
-                e
+                "unable to parse `{port}`: {e}, it should be number in range 1..65535"
             )),
         }
     }
