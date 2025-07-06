@@ -42,7 +42,7 @@ impl<'a> Context<'a> {
         ctx
     }
 
-    pub fn with(&self, own: ContextMap) -> Context {
+    pub fn with(&self, own: ContextMap) -> Context<'_> {
         Context {
             own,
             parent: Some(self),
@@ -128,7 +128,7 @@ impl<'a> Context<'a> {
         self.with(own)
     }
 
-    pub fn iter(&self) -> ContextIterator {
+    pub fn iter(&self) -> ContextIterator<'_> {
         let iter = Box::new(self.own.iter());
         ContextIterator {
             ctx: self,
