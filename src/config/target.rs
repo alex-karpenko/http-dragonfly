@@ -123,7 +123,7 @@ impl TargetConfig {
     /// Check if client with specified timeout and tls config is present in the cache
     /// and either:
     /// - returns clone of the cached one
-    /// - or creates new one, store ith to the cache and returns it
+    /// - or creates new one, store it to the cache and returns it
     fn get_https_client(timeout: &'static Duration, tls_config: &'static TlsConfig) -> HttpsClient {
         type HashKey = (&'static Duration, &'static TlsConfig);
         static CACHE: LazyLock<RwLock<HashMap<HashKey, HttpsClient>>> =
