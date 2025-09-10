@@ -10,6 +10,8 @@ on:
     paths:
       - "**/Cargo.toml"
       - "**/Cargo.lock"
+permissions:
+  contents: read
 
 jobs:
   security-audit:
