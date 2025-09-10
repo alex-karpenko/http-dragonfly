@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.8] - 2025-09-10
+### Details
+#### Changed
+- Maintenance release to update vulnarable dependencies by @alex-karpenko in [#32](https://github.com/alex-karpenko/http-dragonfly/pull/32)
+
+#### Fixed
+- Fix lint warnings by @alex-karpenko in [#30](https://github.com/alex-karpenko/http-dragonfly/pull/30)
+- Fix lint warnings by @alex-karpenko in [#31](https://github.com/alex-karpenko/http-dragonfly/pull/31)
+
 ## [0.3.7] - 2025-04-12
 ### Details
 #### Changed
@@ -124,6 +133,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.3.8]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.7..v0.3.8
 [0.3.7]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.6..v0.3.7
 [0.3.6]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.5..v0.3.6
 [0.3.5]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.4..v0.3.5
