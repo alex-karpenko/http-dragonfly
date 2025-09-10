@@ -6,6 +6,8 @@ on:
     - cron: "17 5 * * 5"
 env:
   CI: true
+permissions:
+  contents: read
 
 jobs:
   ci:
