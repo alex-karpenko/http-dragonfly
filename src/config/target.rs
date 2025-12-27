@@ -18,6 +18,7 @@ use rustls::{
     pki_types::CertificateDer,
     ClientConfig, RootCertStore, SignatureScheme,
 };
+use rustls_pki_types::pem::PemObject;
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer,
@@ -218,7 +219,7 @@ impl TargetConfig {
     fn get_custom_ca_tls_config(ca_path: impl Into<String>) -> Result<ClientConfig, anyhow::Error> {
         let cert_file = File::open(ca_path.into())?;
         let cert_file_reader = &mut BufReader::new(cert_file);
-        let certs: Vec<CertificateDer> = rustls_pemfile::certs(cert_file_reader)
+        let certs: Vec<CertificateDer> = CertificateDer::pem_reader_iter(cert_file_reader)
             .map(|c| c.expect("Failed to parse a certificate from the certificate file."))
             .collect();
         assert!(

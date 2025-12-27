@@ -13,6 +13,7 @@ use rustls::{
     pki_types::{CertificateDer, PrivateKeyDer},
     ServerConfig,
 };
+use rustls_pki_types::pem::PemObject;
 use std::{
     convert::Infallible,
     fs, io,
@@ -190,7 +191,9 @@ fn load_certs(filename: &str) -> io::Result<Vec<CertificateDer<'static>>> {
     let mut reader = io::BufReader::new(certfile);
 
     // Load and return certificate.
-    rustls_pemfile::certs(&mut reader).collect()
+    CertificateDer::pem_reader_iter(&mut reader)
+        .map(|cert| cert.map_err(|e| error(format!("unable to load PEN certificates: {e}"))))
+        .collect()
 }
 
 // Load private key from file.
@@ -201,7 +204,9 @@ fn load_private_key(filename: &str) -> io::Result<PrivateKeyDer<'static>> {
     let mut reader = io::BufReader::new(keyfile);
 
     // Load and return a single private key.
-    rustls_pemfile::private_key(&mut reader).map(|key| key.unwrap())
+    PrivateKeyDer::from_pem_reader(&mut reader)
+        .map(|key| key)
+        .map_err(|e| error(format!("failed to load private key: {e}")))
 }
 
 fn error(err: String) -> io::Error {
