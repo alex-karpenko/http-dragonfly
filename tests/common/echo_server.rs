@@ -205,7 +205,6 @@ fn load_private_key(filename: &str) -> io::Result<PrivateKeyDer<'static>> {
 
     // Load and return a single private key.
     PrivateKeyDer::from_pem_reader(&mut reader)
-        .map(|key| key)
         .map_err(|e| error(format!("failed to load private key: {e}")))
 }
 
