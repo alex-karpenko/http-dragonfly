@@ -148,6 +148,7 @@ impl<'a> Iterator for ContextIterator<'a> {
     type Item = (&'a String, &'a String);
 
     fn next(&mut self) -> Option<Self::Item> {
+        #[allow(clippy::unnecessary_unwrap)]
         if let Some(next) = self.iter.next() {
             Some(next)
         } else if self.ctx.parent.is_none() {
