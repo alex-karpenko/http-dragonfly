@@ -16,6 +16,7 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo, TokioTimer},
     server::conn::auto::Builder,
 };
+use rustls::crypto::aws_lc_rs;
 use signal::SignalHandler;
 use std::sync::Arc;
 use tokio::{
@@ -31,6 +32,8 @@ pub async fn run(
     cli_config: CliConfig,
     env_provider: impl RootEnvironment,
 ) -> Result<(), anyhow::Error> {
+    let _ = aws_lc_rs::default_provider().install_default();
+
     let root_ctx = Arc::new(Context::root(env_provider));
     let app_config = AppConfig::new(cli_config.config_path(), *root_ctx)?;
     let mut servers: Vec<HyperTaskJoinHandle> = vec![];

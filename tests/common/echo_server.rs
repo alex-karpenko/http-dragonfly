@@ -10,6 +10,7 @@ use hyper_util::{
     server::conn::auto::Builder,
 };
 use rustls::{
+    crypto::aws_lc_rs,
     pki_types::{CertificateDer, PrivateKeyDer},
     ServerConfig,
 };
@@ -81,7 +82,7 @@ pub async fn tls_echo_server(
     info!("create tls echo server on port: {}", port);
 
     // Set a process wide default crypto provider.
-    let _ = rustls::crypto::ring::default_provider().install_default();
+    let _ = aws_lc_rs::default_provider().install_default();
 
     let ip = Ipv4Addr::new(0, 0, 0, 0);
     let socket = SocketAddr::new(ip.into(), port);
