@@ -61,7 +61,7 @@ transformations and response strategy configured.
 Use the following command to get usage help, the same as running it with `--help` command line option:
 
 ```bash
-docker run --rm alexkarpenko/http-dragonfly:latest
+docker run --rm ghcr.io/alex-karpenko/http-dragonfly:latest
 ```
 
 Typical output is:
@@ -99,7 +99,7 @@ to <http://www.google.com/>.
 To use it:
 
 ```bash
-docker run --rm --name http-dragonfly -v $PWD/config.yaml:/config.yaml alex-karpenko/http-dragonfly:latest --config /config.yaml -v
+docker run --rm --name http-dragonfly -v $PWD/config.yaml:/config.yaml ghcr.io/alex-karpenko/http-dragonfly:latest --config /config.yaml -v
 ```
 
 ### Helm chart
@@ -202,7 +202,7 @@ Just a few examples of how to use contexts:
 There are four contexts depending on the query stage:
 
 | Context type | Variables                                    | Description                                                                                                                           |
-|--------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| ------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Application  | CTX_APPLICATION_NAME                         | Name of this app, `http-dragonfly`                                                                                                    |
 |              | CTX_APPLICATION_VERSION                      | Version of the app                                                                                                                    |
 |              | OS environment variables                     | All OS environment variables which names satisfy restriction mask from the command line (default mask is `^HTTP_ENV_[a-zA-Z0-9_]+$]`) |
@@ -366,7 +366,7 @@ Generally, all strategies can be divided into four groups by prefixes:
   response.
 
 | Strategy name         | How it works                                                                                                                                                                                                                                                                                                                  |
-|-----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | always_override       | Query all allowed targets (see explanation of allowed targets below the table) but return response defined in `response.override` section (see below)                                                                                                                                                                         |
 | always_target_id      | Query all allowed targets but return response from one specific target regardless of it's status                                                                                                                                                                                                                              |
 | ok_then_failed        | Query all allowed targets, if at least on response is successful - return any successful one, if all responses are failed - return any failed response                                                                                                                                                                        |
