@@ -8,7 +8,7 @@ Context(
     "CTX_REQUEST_HEADERS_X_SOME_HEADER": "some header value",
     "CTX_REQUEST_HOST": "www.google.com",
     "CTX_REQUEST_METHOD": "POST",
-    "CTX_REQUEST_PATH": "/test-path",
+    "CTX_REQUEST_PATH": "test-path",
     "CTX_REQUEST_QUERY": "query=some-query",
     "CTX_REQUEST_SOURCE_IP": "4.3.2.1",
   },

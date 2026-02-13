@@ -42,7 +42,7 @@ listeners:
         headers:
           - drop: content-length
           - add: X-Path
-            value: ${CTX_REQUEST_PATH}
+            value: /${CTX_REQUEST_PATH}
     response:
       override:
         headers:
@@ -61,7 +61,7 @@ listeners:
         headers:
           - drop: content-length
           - add: X-Path
-            value: ${CTX_REQUEST_PATH}
+            value: /${CTX_REQUEST_PATH}
     response:
       override:
         headers:
