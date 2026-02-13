@@ -84,7 +84,10 @@ impl<'a> Context<'a> {
         own.insert("CTX_LISTENER_NAME".into(), listener_name);
         own.insert("CTX_REQUEST_SOURCE_IP".into(), addr.ip().to_string());
         own.insert("CTX_REQUEST_METHOD".into(), req.method.to_string());
-        own.insert("CTX_REQUEST_PATH".into(), req.uri.path().to_string());
+        own.insert(
+            "CTX_REQUEST_PATH".into(),
+            req.uri.path().trim_start_matches('/').to_string(),
+        );
         if let Some(host) = req.uri.host() {
             own.insert("CTX_REQUEST_HOST".into(), host.to_lowercase());
         }

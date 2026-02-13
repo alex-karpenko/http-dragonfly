@@ -210,7 +210,7 @@ There are four contexts depending on the query stage:
 |              | CTX_REQUEST_SOURCE_IP                        | Client's source IP address                                                                                                            |
 |              | CTX_REQUEST_METHOD                           | Request method                                                                                                                        |
 |              | CTX_REQUEST_HOST                             | URL host name from the original request                                                                                               |
-|              | CTX_REQUEST_PATH                             | URL path from the original request                                                                                                    |
+|              | CTX_REQUEST_PATH                             | URL path from the original request (without leading slashes!)                                                                         |
 |              | CTX_REQUEST_QUERY                            | URL query string from the original request                                                                                            |
 |              | CTX_REQUEST_HEADERS_<UPPERCASE_HEADER_NAME>  | Each request's header has it's context variable                                                                                       |
 | Target       | CTX_TARGET_ID                                | ID of the target which response will be returned back                                                                                 |
@@ -512,7 +512,7 @@ Query www.example.com if request has any non-empty path and forward all requests
 ```yaml
 listeners:
   - targets:
-      - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
+      - url: https://www.example.com/${CTX_REQUEST_PATH}
         id: query
         condition: .env[CTX_REQUEST_PATH] != ""
       - url: http://query-logger:9090/
@@ -524,7 +524,7 @@ unconditionally:
 ```yaml
 listeners:
   - targets:
-      - url: https://www.example.com${CTX_REQUEST_PATH:-"/"}
+      - url: https://www.example.com/${CTX_REQUEST_PATH}
         id: query
         condition: .request.headers["x-route-to-query"] == "true"
       - url: http://query-logger:9090/

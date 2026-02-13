@@ -22,7 +22,7 @@ listeners:
         headers:
           - drop: content-length
           - add: X-Path
-            value: ${CTX_REQUEST_PATH}
+            value: /${CTX_REQUEST_PATH}
 
   # Failed first, ok
   - id: three-targets-8001
