@@ -8,7 +8,7 @@ use hyper_util::{
 };
 use std::net::{Ipv4Addr, SocketAddr};
 use tokio::{net::TcpListener, select, task::JoinSet};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Health check handler
 ///
@@ -42,7 +42,7 @@ pub async fn new(port: u16, timeout_sec: u64) -> HyperTaskJoinHandle {
                     let (stream, addr) = match accepted {
                         Ok(x) => x,
                         Err(e) => {
-                            warn!(error = %e, "failed to accept connection");
+                            warn!(error = %e, "failed to accept health check connection");
                             continue;
                         }
                     };
@@ -56,7 +56,7 @@ pub async fn new(port: u16, timeout_sec: u64) -> HyperTaskJoinHandle {
                             .await;
 
                         if let Err(e) = result {
-                            error!(error = %e, "error serving request from {addr}");
+                            debug!(error = %e, "error serving health check request from {addr}");
                         }
                     };
 
