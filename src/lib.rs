@@ -50,7 +50,7 @@ pub async fn run(
 
     // Setup health check responder
     if let Some(port) = cli_config.health_check_port {
-        servers.push(health_check::new(port, 5).await);
+        servers.push(health_check::new(port, cli_config.health_check_timeout).await);
     }
 
     let _results = join_all(servers).await;

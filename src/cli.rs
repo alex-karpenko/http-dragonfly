@@ -4,6 +4,7 @@ use tracing::debug;
 use tracing_subscriber::{filter::LevelFilter, fmt, EnvFilter};
 
 const DEFAULT_ENV_REGEX: &str = "^HTTP_ENV_[a-zA-Z0-9_]+$";
+const DEFAULT_HEALTH_CHECK_TIMEOUT: u64 = 5;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -31,6 +32,10 @@ pub struct CliConfig {
     /// Enable health check responder on the specified port
     #[arg(long, short = 'p', value_parser=CliConfig::parse_health_check_port)]
     pub health_check_port: Option<u16>,
+
+    /// Health check timeout, in seconds
+    #[arg(long, short = 't', default_value_t = DEFAULT_HEALTH_CHECK_TIMEOUT, value_parser=clap::value_parser!(u64).range(1..60))]
+    pub health_check_timeout: u64,
 }
 
 impl CliConfig {
@@ -122,6 +127,7 @@ impl Default for CliConfig {
             config: "".to_owned(),
             env_mask: DEFAULT_ENV_REGEX.to_owned(),
             health_check_port: None,
+            health_check_timeout: DEFAULT_HEALTH_CHECK_TIMEOUT,
         }
     }
 }
