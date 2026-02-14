@@ -3,6 +3,8 @@ mod common;
 use crate::common::run_test_with_config;
 use common::{init_logging, test_one_case, TestConfig};
 use futures_util::future::join_all;
+use reqwest::Method;
+use serde_json::json;
 
 const TEST_CONFIG_PATH: &str = "tests/configs/integration/basic.yaml";
 const TEST_PORT: u16 = 3000;
@@ -188,6 +190,33 @@ fn prepare_test_cases() -> Vec<TestConfig> {
             description: "conditionals_routing",
             port: 8009,
             expected_x_target_id_header: Some("1"),
+            ..TestConfig::default()
+        },
+        TestConfig {
+            description: "conditionals_routing with extended expression",
+            port: 8009,
+            expected_x_target_id_header: Some("4"),
+            include_good_target: false,
+            request_body: Some(json!({"id_from_list": "0-1-2-3-4"}).to_string()),
+            method: Method::POST,
+            ..TestConfig::default()
+        },
+        TestConfig {
+            description: "conditionals_routing with extended expression",
+            port: 8009,
+            expected_x_target_id_header: Some("4"),
+            include_good_target: false,
+            request_body: Some(json!({"id_from_list": "5-6-7-8-9"}).to_string()),
+            method: Method::POST,
+            ..TestConfig::default()
+        },
+        TestConfig {
+            description: "conditionals_routing with extended expression",
+            port: 8009,
+            expected_x_target_id_header: Some("default"),
+            include_good_target: false,
+            request_body: Some(json!({"id_from_list": "qwerty"}).to_string()),
+            method: Method::POST,
             ..TestConfig::default()
         },
         TestConfig {

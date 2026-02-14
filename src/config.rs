@@ -120,15 +120,12 @@ mod test {
     #[test]
     fn wrong_config() {
         let ctx = test_context::get_test_ctx();
-        glob!(
-            TEST_CONFIGS_FOLDER,
-            "wrong/*.yaml",
-            |path| insta::with_settings!({filters => vec![(
-                r#"unable to parse config: listeners\[0\]\.targets\[1\]\.condition: invalid config: found "/" but expected one of "(.+)" at line 9 column 18,"#,
-                r#"unable to parse config: listeners[0].targets[1].condition: invalid config: found "/" but expected one of "[LIST OF ALLOWED JQ STATEMENTS]" at line 9 column 18,"#
-            )]},
-            {assert_debug_snapshot!(AppConfig::from_file(&String::from(path.to_str().unwrap()),ctx));})
-        );
+        glob!(TEST_CONFIGS_FOLDER, "wrong/*.yaml", |path| {
+            assert_debug_snapshot!(AppConfig::from_file(
+                &String::from(path.to_str().unwrap()),
+                ctx
+            ))
+        });
     }
 
     #[test]

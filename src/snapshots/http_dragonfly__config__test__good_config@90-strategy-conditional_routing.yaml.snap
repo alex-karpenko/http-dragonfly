@@ -45,122 +45,7 @@ Ok(
                         condition: Some(
                             Filter(
                                 ConditionFilter {
-                                    filter: Owned(
-                                        Id(
-                                            8,
-                                        ),
-                                        Lut {
-                                            defs: [
-                                                Id,
-                                                ToString,
-                                                ObjEmpty,
-                                                Path(
-                                                    Id(
-                                                        2,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Range(
-                                                                    None,
-                                                                    None,
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Path(
-                                                    Id(
-                                                        0,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Range(
-                                                                    None,
-                                                                    None,
-                                                                ),
-                                                                Optional,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Call(
-                                                    Call {
-                                                        id: Id(
-                                                            7,
-                                                        ),
-                                                        typ: Throw,
-                                                        skip: 0,
-                                                        args: [],
-                                                    },
-                                                ),
-                                                Pipe(
-                                                    Id(
-                                                        4,
-                                                    ),
-                                                    false,
-                                                    Id(
-                                                        5,
-                                                    ),
-                                                ),
-                                                Comma(
-                                                    Id(
-                                                        0,
-                                                    ),
-                                                    Id(
-                                                        6,
-                                                    ),
-                                                ),
-                                                Ord(
-                                                    Id(
-                                                        12,
-                                                    ),
-                                                    Eq,
-                                                    Id(
-                                                        13,
-                                                    ),
-                                                ),
-                                                Id,
-                                                Str(
-                                                    "body",
-                                                ),
-                                                Str(
-                                                    "field",
-                                                ),
-                                                Path(
-                                                    Id(
-                                                        9,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Index(
-                                                                    Id(
-                                                                        10,
-                                                                    ),
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                            (
-                                                                Index(
-                                                                    Id(
-                                                                        11,
-                                                                    ),
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Int(
-                                                    1,
-                                                ),
-                                            ],
-                                            natives: [],
-                                        },
-                                    ),
+                                    filter: ".body.field == 1",
                                 },
                             ),
                         ),
@@ -179,122 +64,26 @@ Ok(
                         condition: Some(
                             Filter(
                                 ConditionFilter {
-                                    filter: Owned(
-                                        Id(
-                                            8,
-                                        ),
-                                        Lut {
-                                            defs: [
-                                                Id,
-                                                ToString,
-                                                ObjEmpty,
-                                                Path(
-                                                    Id(
-                                                        2,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Range(
-                                                                    None,
-                                                                    None,
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Path(
-                                                    Id(
-                                                        0,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Range(
-                                                                    None,
-                                                                    None,
-                                                                ),
-                                                                Optional,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Call(
-                                                    Call {
-                                                        id: Id(
-                                                            7,
-                                                        ),
-                                                        typ: Throw,
-                                                        skip: 0,
-                                                        args: [],
-                                                    },
-                                                ),
-                                                Pipe(
-                                                    Id(
-                                                        4,
-                                                    ),
-                                                    false,
-                                                    Id(
-                                                        5,
-                                                    ),
-                                                ),
-                                                Comma(
-                                                    Id(
-                                                        0,
-                                                    ),
-                                                    Id(
-                                                        6,
-                                                    ),
-                                                ),
-                                                Ord(
-                                                    Id(
-                                                        12,
-                                                    ),
-                                                    Eq,
-                                                    Id(
-                                                        13,
-                                                    ),
-                                                ),
-                                                Id,
-                                                Str(
-                                                    "headers",
-                                                ),
-                                                Str(
-                                                    "host",
-                                                ),
-                                                Path(
-                                                    Id(
-                                                        9,
-                                                    ),
-                                                    Path(
-                                                        [
-                                                            (
-                                                                Index(
-                                                                    Id(
-                                                                        10,
-                                                                    ),
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                            (
-                                                                Index(
-                                                                    Id(
-                                                                        11,
-                                                                    ),
-                                                                ),
-                                                                Essential,
-                                                            ),
-                                                        ],
-                                                    ),
-                                                ),
-                                                Str(
-                                                    "google.com",
-                                                ),
-                                            ],
-                                            natives: [],
-                                        },
-                                    ),
+                                    filter: ".headers.host == \"google.com\"",
+                                },
+                            ),
+                        ),
+                        tls: None,
+                    },
+                    TargetConfig {
+                        id: Some(
+                            "google-4",
+                        ),
+                        url: "https://www.google.com/",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: Some(
+                            Filter(
+                                ConditionFilter {
+                                    filter: ".body.id_from_list as $c | \"0-1-2-3-4 5-6-7-8-9\" | split(\" \") | any(. == $c)",
                                 },
                             ),
                         ),
