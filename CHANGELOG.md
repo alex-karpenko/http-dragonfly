@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-02-14
+### Details
+#### Breaking changes
+- Remove leading slashes from CTX_REQUEST_PATH context variable by @alex-karpenko in [#38](https://github.com/alex-karpenko/http-dragonfly/pull/38)
+- Implement extended JQ conditional expressions in target config by @alex-karpenko in [#39](https://github.com/alex-karpenko/http-dragonfly/pull/39)
+
+#### Added
+
+#### Changed
+- Update dependencies by @alex-karpenko in [#34](https://github.com/alex-karpenko/http-dragonfly/pull/34)
+- Update dependencies by @alex-karpenko in [#36](https://github.com/alex-karpenko/http-dragonfly/pull/36)
+
+#### Fixed
+- Fix typos in the documentation by @alex-karpenko in [#35](https://github.com/alex-karpenko/http-dragonfly/pull/35)
+- Improve health checks handling by @alex-karpenko in [#37](https://github.com/alex-karpenko/http-dragonfly/pull/37)
+
+#### Removed
+
 ## [0.3.9] - 2025-12-27
 ### Details
 #### Fixed
@@ -138,6 +156,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.4.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.9..v0.4.0
 [0.3.9]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.8..v0.3.9
 [0.3.8]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.7..v0.3.8
 [0.3.7]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.6..v0.3.7
