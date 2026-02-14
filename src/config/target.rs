@@ -5,6 +5,7 @@ use super::{
     ConfigValidator,
 };
 use crate::{config::ConfigError, context::Context};
+use core::fmt;
 use http_body_util::Full;
 use hyper::{body::Bytes, http::request::Parts, Uri};
 use hyper_rustls::HttpsConnectorBuilder;
@@ -12,7 +13,8 @@ use hyper_util::{
     client::legacy::{connect::HttpConnector, Client},
     rt::TokioExecutor,
 };
-use jaq_interpret::{Ctx, Filter, FilterT, ParseCtx, RcIter, Val};
+use jaq_core::{load, Compiler, Ctx, Filter, Native, RcIter};
+use jaq_json::Val;
 use rustls::{
     client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
     pki_types::CertificateDer,
@@ -31,7 +33,7 @@ use std::{
     sync::{Arc, LazyLock, RwLock},
     time::Duration,
 };
-use tracing::{debug, error};
+use tracing::debug;
 
 const DEFAULT_TARGET_TIMEOUT_SEC: u64 = 60;
 
@@ -351,9 +353,17 @@ impl<'de> Deserialize<'de> for TargetConditionConfig {
     }
 }
 
-#[derive(Debug)]
 pub struct ConditionFilter {
-    filter: Filter,
+    filter: Filter<Native<Val>>,
+    filter_str: String,
+}
+
+impl fmt::Debug for ConditionFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConditionFilter")
+            .field("filter", &self.filter_str)
+            .finish()
+    }
 }
 
 impl From<&str> for ConditionFilter {
@@ -379,23 +389,32 @@ impl ConditionFilter {
 
     fn from_str(value: &str) -> Result<Self, ConfigError> {
         debug!("filter=`{value}`");
-        let mut defs = ParseCtx::new(Vec::new());
-        let (f, errs) = jaq_parse::parse(value, jaq_parse::main());
-        if !errs.is_empty() {
-            errs.iter()
-                .for_each(|e| error!("unable to parse conditional expression: {e}"));
-            return Err(ConfigError::ValidateConfig {
-                cause: errs[0].to_string(),
-            });
-        }
-        if let Some(f) = f {
-            let filter = defs.compile(f);
-            Ok(ConditionFilter { filter })
-        } else {
-            Err(ConfigError::ValidateConfig {
-                cause: "invalid conditional expression".into(),
-            })
-        }
+
+        let program = load::File {
+            code: value,
+            path: (),
+        };
+        let arena = load::Arena::default();
+        let loader = load::Loader::new(jaq_std::defs().chain(jaq_json::defs()));
+
+        // parse the filter
+        let modules = loader
+            .load(&arena, program)
+            .map_err(|_err| ConfigError::ValidateConfig {
+                cause: format!("invalid conditional expression: `{value}`"),
+            })?;
+
+        // compile the filter
+        let filter = Compiler::default()
+            .with_funs(jaq_std::funs().chain(jaq_json::funs()))
+            .compile(modules)
+            .map_err(|_err| ConfigError::ValidateConfig {
+                cause: format!("invalid conditional expression: `{value}`"),
+            })?;
+        Ok(ConditionFilter {
+            filter,
+            filter_str: value.to_string(),
+        })
     }
 }
 

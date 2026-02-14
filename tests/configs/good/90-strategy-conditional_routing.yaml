@@ -1,12 +1,15 @@
 listeners:
   - strategy: conditional_routing
     targets:
-    - url: https://www.google.com/
-      id: google-1
-      condition: default
-    - url: https://www.google.com/
-      id: google-2
-      condition: .body.field == 1
-    - url: https://www.google.com/
-      id: google-3
-      condition: .headers.host == "google.com"
+      - url: https://www.google.com/
+        id: google-1
+        condition: default
+      - url: https://www.google.com/
+        id: google-2
+        condition: .body.field == 1
+      - url: https://www.google.com/
+        id: google-3
+        condition: .headers.host == "google.com"
+      - url: https://www.google.com/
+        id: google-4
+        condition: .body.id_from_list as $c | "0-1-2-3-4 5-6-7-8-9" | split(" ") | any(. == $c)

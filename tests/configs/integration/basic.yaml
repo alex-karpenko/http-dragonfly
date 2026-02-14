@@ -9,6 +9,7 @@
 # 8007 - always_target_id
 # 8008 - always_override
 # 8009 - conditional_routing
+# 8010 - conditional_routing, with different statuses
 
 listeners:
   # Basic forwarding
@@ -243,6 +244,11 @@ listeners:
         url: http://localhost:3000/2
         body: "3"
         condition: .request.headers["x-include-timeout"] == "yes"
+      - id: "4"
+        timeout: 1s
+        url: http://localhost:3000/
+        body: "4"
+        condition: .body.id_from_list as $c | "0-1-2-3-4 5-6-7-8-9" | split(" ") | any(. == $c)
       - id: default
         url: http://localhost:3000/
         body: default

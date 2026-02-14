@@ -4,12 +4,13 @@ use echo_server::{echo_server, tls_echo_server};
 use futures_util::Future;
 use http_dragonfly::{cli::CliConfig, context::RootOsEnvironment};
 use hyper::header::HeaderValue;
-use reqwest::Client;
+use reqwest::{Client, Method};
 use std::{env, sync::LazyLock, time::Duration};
 
 const SERVER_CERT_BUNDLE: &str = "/end.crt";
 const SERVER_PRIVATE_KEY: &str = "/test-server.key";
 
+#[derive(Debug, Clone)]
 pub struct TestConfig {
     pub description: &'static str,
     pub port: u16,
@@ -18,6 +19,8 @@ pub struct TestConfig {
     pub include_good_target: bool,
     pub expected_status: u16,
     pub expected_x_target_id_header: Option<&'static str>,
+    pub request_body: Option<String>,
+    pub method: Method,
 }
 
 impl Default for TestConfig {
@@ -30,6 +33,8 @@ impl Default for TestConfig {
             include_good_target: true,
             expected_status: 200,
             expected_x_target_id_header: Some("GOOD"),
+            request_body: None,
+            method: Method::GET,
         }
     }
 }
@@ -90,7 +95,16 @@ async fn run_test_with_config_and_server(
 }
 
 pub async fn test_one_case(client: &Client, test_config: TestConfig) {
-    let mut req = client.get(format!("http://localhost:{}/", test_config.port));
+    let mut req = match test_config.method {
+        Method::GET => client.get(format!("http://localhost:{}/", test_config.port)),
+        Method::POST => client.post(format!("http://localhost:{}/", test_config.port)),
+        _ => panic!("not supported test method '{}'", test_config.method),
+    };
+
+    if let Some(body) = test_config.request_body {
+        req = req.body(body.to_string());
+    }
+
     if test_config.include_wrong_port {
         req = req.header("x-include-wrong-port", "yes")
     }

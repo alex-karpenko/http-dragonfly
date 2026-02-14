@@ -84,6 +84,8 @@ Options:
           Allowed environment variables mask (regex) [default: ^HTTP_ENV_[a-zA-Z0-9_]+$]
   -p, --health-check-port <HEALTH_CHECK_PORT>
           Enable health check responder on the specified port
+  -t, --health-check-timeout <HEALTH_CHECK_TIMEOUT>
+          Health check timeout, in seconds [default: 5]
   -h, --help
           Print help
   -V, --version
