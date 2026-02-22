@@ -121,6 +121,7 @@ Ok(
                         tls: None,
                     },
                 ],
+                log_target_status: false,
                 response: ResponseConfig {
                     target_selector: Some(
                         "Target-0",
@@ -150,7 +151,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.4.0",
+                                            "0.4.1",
                                         ),
                                     },
                                     HeaderTransform {

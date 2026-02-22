@@ -231,9 +231,22 @@ impl RequestHandler {
             results.push(r);
         }
 
-        // Pre-process results
+        // Preprocess results
         let mut responses: ResponsesMap = ResponsesMap::new();
         for (pos, res) in results.into_iter().enumerate() {
+            if self.listener_cfg.log_target_status() {
+                let status = match &res {
+                    ResponseResult::Ok(response) => format!("ok {}", response.status().as_u16()),
+                    ResponseResult::HyperError(error) => format!("error: {}", error),
+                    ResponseResult::Timeout => "timeout".to_string(),
+                };
+                info!(
+                    "{req_id}: listener: {}, target `{}`, status: {}",
+                    self.listener_cfg.id(),
+                    target_ids[pos],
+                    status
+                )
+            }
             match res {
                 ResponseResult::Ok(resp) => {
                     debug!("OK response: {:#?}", resp);

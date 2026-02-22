@@ -90,6 +90,7 @@ Ok(
                         tls: None,
                     },
                 ],
+                log_target_status: false,
                 response: ResponseConfig {
                     target_selector: None,
                     failed_status_regex: "4\\d{2}|5\\d{2}",

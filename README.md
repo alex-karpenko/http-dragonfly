@@ -449,6 +449,7 @@ Target config includes the following parameters:
   mandatory) this is something like `500`
 - `condition`: predicate expression to calculate before request, if value is `false` this target will be excluded from
   the list of allowed targets, default is `true`, see details below
+- `log_target_status`: whether to log response status for each target call, deliberately on `info` level, default in `false`
 
 ##### Listener: `targets.on_error`
 
