@@ -31,6 +31,7 @@ Ok(
                         tls: None,
                     },
                 ],
+                log_target_status: false,
                 response: ResponseConfig {
                     target_selector: Some(
                         "google-1",
