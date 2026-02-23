@@ -39,6 +39,8 @@ pub struct ListenerConfig {
     headers: Option<Vec<HeaderTransform>>,
     methods: Option<HashSet<HttpMethod>>,
     targets: TargetConfigList,
+    #[serde(default = "ListenerConfig::default_log_target_status")]
+    log_target_status: bool,
     #[serde(default)]
     response: ResponseConfig,
     #[serde(default)]
@@ -64,6 +66,10 @@ pub enum TlsVerifyConfig {
 impl ListenerConfig {
     fn default_listener_timeout() -> Duration {
         Duration::from_secs(DEFAULT_LISTENER_TIMEOUT_SEC)
+    }
+
+    fn default_log_target_status() -> bool {
+        false
     }
 
     /// Returns the name of this [`ListenerConfig`].
@@ -109,6 +115,11 @@ impl ListenerConfig {
     /// Returns a reference to the targets of this [`ListenerConfig`].
     pub fn targets(&self) -> &[TargetConfig] {
         self.targets.as_ref()
+    }
+
+    /// Returns log target status flag
+    pub fn log_target_status(&self) -> bool {
+        self.log_target_status
     }
 
     /// Returns a reference to the response of this [`ListenerConfig`].
