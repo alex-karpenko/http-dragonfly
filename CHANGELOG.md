@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2026-02-23
+### Details
+#### Added
+- Implement optional logging of the target response status on info level by @alex-karpenko in [#40](https://github.com/alex-karpenko/http-dragonfly/pull/40)
+
+#### Fixed
+- Use stable rust toolchain for code coverage tests by @alex-karpenko in [#41](https://github.com/alex-karpenko/http-dragonfly/pull/41)
+
 ## [0.4.0] - 2026-02-14
 ### Details
 #### Breaking changes
@@ -156,6 +164,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.4.1]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.0..v0.4.1
 [0.4.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.9..v0.4.0
 [0.3.9]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.8..v0.3.9
 [0.3.8]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.7..v0.3.8
