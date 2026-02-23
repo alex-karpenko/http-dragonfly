@@ -258,7 +258,7 @@ Each listener has the following configuration parameters:
 - `strategy`: response strategy to select which target(s) to use and which response to send back.
 - `headers`: list of transformations to apply to request headers before pass it to targets.
 - `targets`: list of targets to query for responses.
-- `log_target_status`: whether to log response status for each target call, deliberately on `info` level, default in `false`
+- `log_target_status`: whether to log response status for each target call, deliberately on `info` level, default is `false`
 - `response`: specification of response transformations.
 
 #### Listener: `id`
