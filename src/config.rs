@@ -27,7 +27,7 @@ pub enum ConfigError {
     #[error("unable to parse config: {}", .cause)]
     ParseConfigFile {
         #[from]
-        cause: serde_yaml::Error,
+        cause: serde_yaml_ng::Error,
     },
     #[error("invalid config: {}", .cause)]
     ValidateConfig { cause: String },
@@ -66,7 +66,7 @@ impl AppConfig {
         let mut buf = String::new();
         reader.read_to_string(&mut buf)?;
         let config = env_with_context_no_errors(&buf, |v| ctx.get(&v.into()));
-        let config: AppConfig = serde_yaml::from_str(&config)?;
+        let config: AppConfig = serde_yaml_ng::from_str(&config)?;
 
         debug!("Application config: {:#?}", config);
         match config.validate() {
