@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 2026-03-13
+### Details
+#### Fixed
+- Fix typo in the documentation about log_target_status flag by @alex-karpenko in [#42](https://github.com/alex-karpenko/http-dragonfly/pull/42)
+- Update vulnerable dependencies by @alex-karpenko in [#43](https://github.com/alex-karpenko/http-dragonfly/pull/43)
+
 ## [0.4.1] - 2026-02-23
 ### Details
 #### Added
@@ -164,6 +170,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.4.2]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.1..v0.4.2
 [0.4.1]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.0..v0.4.1
 [0.4.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.9..v0.4.0
 [0.3.9]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.3.8..v0.3.9
