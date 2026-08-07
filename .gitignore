@@ -1,6 +1,7 @@
 /target
 .vscode/
 .idea/
+CLAUDE.local.md
 config*.yaml
 !config.yaml
 

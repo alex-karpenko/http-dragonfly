@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"$(git status --porcelain)\" ]; then OUT=$(pre-commit run --all-files 2>&1); STATUS=$?; if [ $STATUS -ne 0 ]; then jq -n --arg reason \"$(printf '%s' \"$OUT\" | tail -c 3000)\" '{decision: \"block\", reason: (\"pre-commit run --all-files failed:\\n\\n\" + $reason)}'; fi; fi",
+            "timeout": 120,
+            "statusMessage": "Running pre-commit checks..."
+          }
+        ]
+      }
+    ]
+  }
+}
