@@ -450,6 +450,7 @@ Target config includes the following parameters:
   mandatory) this is something like `500`
 - `condition`: predicate expression to calculate before request, if value is `false` this target will be excluded from
   the list of allowed targets, default is `true`, see details below
+- `aws_sigv4`: sign the request to this target with AWS Signature Version 4, optional, see below for details
 
 ##### Listener: `targets.on_error`
 
@@ -507,6 +508,49 @@ Condition examples:
 - `.body.some.body.int.value == 5`
 - `.body.data.products[]|length > 0`
 - `default`
+
+##### Listener: `targets.aws_sigv4`
+
+Format: object with `service` (required), `region` (optional), `role_arn` (optional).
+
+Default: unset — the request is sent unsigned.
+
+If set, `http-dragonfly` signs the outgoing request to this target with
+[AWS Signature Version 4](https://docs.aws.amazon.com/IAM/latest/UserGuide/create-signed-request.html),
+which is required by many AWS services when called directly (S3, API Gateway, OpenSearch, etc.).
+
+- `service`: the AWS SigV4 service signing name, e.g. `s3`, `execute-api`, `es`, `aoss`.
+- `region`: the AWS region to sign for. If omitted, falls back to whatever the AWS SDK's
+  default region resolution finds (`AWS_REGION`/`AWS_DEFAULT_REGION` environment variable,
+  `~/.aws/config` profile, or EC2/ECS instance metadata). If neither is available, startup
+  fails with a validation error.
+- `role_arn`: optional IAM role to assume (via STS `AssumeRole`) before signing, if the
+  credentials that should sign this target's requests differ from the process's default
+  identity.
+
+Credentials are **never** configured explicitly in `http-dragonfly`'s own config — only the
+AWS SDK's standard credential resolution is used (environment variables, `~/.aws/credentials`
+and `~/.aws/config`, SSO, EC2/ECS/container instance metadata, etc.), exactly as the AWS CLI
+and other AWS SDKs resolve credentials by default.
+
+The AWS SDK is only initialized if at least one target in the whole configuration has
+`aws_sigv4` set. Credentials are cached and shared across all targets that resolve to the
+same identity (the default identity, or a given `role_arn`) to avoid hammering STS/IMDS with
+requests, and are refreshed proactively once half of their validity window has elapsed.
+
+Example:
+
+```yaml
+targets:
+  - url: https://my-bucket.s3.us-east-1.amazonaws.com/some/key
+    aws_sigv4:
+      service: s3
+  - url: https://search-my-domain.us-west-2.es.amazonaws.com/_search
+    aws_sigv4:
+      service: es
+      region: us-west-2
+      role_arn: arn:aws:iam::123456789012:role/my-opensearch-role
+```
 
 ##### Listener: `target` config examples
 

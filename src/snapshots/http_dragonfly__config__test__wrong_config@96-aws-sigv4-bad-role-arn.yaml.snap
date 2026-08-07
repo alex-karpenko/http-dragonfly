@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
+input_file: tests/configs/wrong/96-aws-sigv4-bad-role-arn.yaml
+---
+Err(
+    invalid config: `aws_sigv4.role_arn` doesn't look like a valid IAM role ARN: `not-an-arn`,
+)

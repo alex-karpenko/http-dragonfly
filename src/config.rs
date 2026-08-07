@@ -1,3 +1,4 @@
+pub mod aws_sigv4;
 pub mod headers;
 pub mod listener;
 pub mod response;

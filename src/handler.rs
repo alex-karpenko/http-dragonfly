@@ -7,7 +7,6 @@ use crate::{
     },
     context::Context,
 };
-use futures_util::future::join_all;
 use http::HeaderValue;
 use http_body_util::{BodyExt, Full};
 use hyper::{
@@ -22,6 +21,15 @@ use uuid::Uuid;
 
 pub type ResponsesMap<'a> = HashMap<String, (Option<Response<Full<Bytes>>>, &'a Context<'a>)>;
 pub type HyperError = hyper_util::client::legacy::Error;
+
+enum TargetDispatch {
+    Spawned(
+        tokio::task::JoinHandle<
+            Result<Result<Response<Incoming>, HyperError>, tokio::time::error::Elapsed>,
+        >,
+    ),
+    SigningFailed(String),
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct RequestHandler {
@@ -186,46 +194,65 @@ impl RequestHandler {
                 target_request_builder = target_request_builder.header(k, v);
             }
             // Finalize request with body
-            let target_request: Request<Full<Bytes>> = if let Some(body) = &target.body() {
+            let target_body: Bytes = if let Some(body) = &target.body() {
                 let body = env_with_context_no_errors(body, |v| ctx.get(&v.into()));
-                target_request_builder.body(Full::from(body))?
+                Bytes::from(body.into_owned().into_bytes())
             } else {
-                target_request_builder.body(Full::from(body_bytes.clone()))?
+                body_bytes.clone()
             };
+            let mut target_request: Request<Full<Bytes>> =
+                target_request_builder.body(Full::from(target_body.clone()))?;
 
-            // Put request to queue
-            debug!(
-                "add to queue: target `{}` request: {:?}",
-                target.id(),
-                target_request
-            );
+            // Sign the request if this target requires AWS SigV4
+            let signing_result = target.sign_request(&mut target_request, &target_body).await;
 
-            // Prepare target request
-            let http_client = target.https_client(self.listener_cfg.tls());
-            let http_request = http_client.request(target_request);
-            let http_request = tokio::time::timeout(*target.timeout(), http_request);
+            match signing_result {
+                Ok(()) => {
+                    // Put request to queue
+                    debug!(
+                        "add to queue: target `{}` request: {:?}",
+                        target.id(),
+                        target_request
+                    );
 
-            target_requests.push(tokio::spawn(http_request));
+                    // Prepare target request
+                    let http_client = target.https_client(self.listener_cfg.tls());
+                    let http_request = http_client.request(target_request);
+                    let http_request = tokio::time::timeout(*target.timeout(), http_request);
+
+                    target_requests.push(TargetDispatch::Spawned(tokio::spawn(http_request)));
+                }
+                Err(e) => {
+                    error!(
+                        "{req_id}: target `{}` signing failed, listener: {}: {e}",
+                        target.id(),
+                        self.listener_cfg.id()
+                    );
+                    target_requests.push(TargetDispatch::SigningFailed(e.to_string()));
+                }
+            }
             target_ctx.push(ctx);
             target_ids.push(target.id());
         }
 
         // Get results
-        let raw_results = join_all(target_requests).await;
         let mut results: Vec<ResponseResult> = vec![];
-        for r in raw_results.into_iter().map(|r| r.unwrap()) {
-            let r = match r {
-                Err(_ee) => ResponseResult::Timeout,
-                Ok(r) => match r {
-                    Ok(r) => {
-                        // Prepare owned body
-                        let (parts, body) = r.into_parts();
-                        let body = body.collect().await.expect("Looks like a BUG!").to_bytes();
-                        let r: Response<Full<Bytes>> =
-                            Response::from_parts(parts, Full::from(body));
-                        ResponseResult::Ok(r)
-                    }
-                    Err(he) => ResponseResult::HyperError(he),
+        for dispatch in target_requests {
+            let r = match dispatch {
+                TargetDispatch::SigningFailed(cause) => ResponseResult::SigningError(cause),
+                TargetDispatch::Spawned(handle) => match handle.await.unwrap() {
+                    Err(_ee) => ResponseResult::Timeout,
+                    Ok(r) => match r {
+                        Ok(r) => {
+                            // Prepare owned body
+                            let (parts, body) = r.into_parts();
+                            let body = body.collect().await.expect("Looks like a BUG!").to_bytes();
+                            let r: Response<Full<Bytes>> =
+                                Response::from_parts(parts, Full::from(body));
+                            ResponseResult::Ok(r)
+                        }
+                        Err(he) => ResponseResult::HyperError(he),
+                    },
                 },
             };
             results.push(r);
@@ -239,6 +266,7 @@ impl RequestHandler {
                     ResponseResult::Ok(response) => format!("ok {}", response.status().as_u16()),
                     ResponseResult::HyperError(error) => format!("error: {}", error),
                     ResponseResult::Timeout => "timeout".to_string(),
+                    ResponseResult::SigningError(cause) => format!("aws signing error: {cause}"),
                 };
                 info!(
                     "{req_id}: listener: {}, target `{}`, status: {}",
@@ -252,7 +280,9 @@ impl RequestHandler {
                     debug!("OK response: {:#?}", resp);
                     responses.insert(target_ids[pos].clone(), (Some(resp), &target_ctx[pos]));
                 }
-                ResponseResult::HyperError(_) | ResponseResult::Timeout => {
+                ResponseResult::HyperError(_)
+                | ResponseResult::Timeout
+                | ResponseResult::SigningError(_) => {
                     debug!("ERR response: {:#?}", res);
                     let target = targets[pos];
                     let resp = match target.on_error() {
@@ -328,4 +358,5 @@ pub enum ResponseResult {
     Ok(Response<Full<Bytes>>),
     HyperError(HyperError),
     Timeout,
+    SigningError(String),
 }

@@ -29,6 +29,7 @@ Ok(
                         error_status: None,
                         condition: None,
                         tls: None,
+                        aws_sigv4: None,
                     },
                 ],
                 log_target_status: false,

@@ -70,6 +70,7 @@ Ok(
                         ),
                         condition: None,
                         tls: None,
+                        aws_sigv4: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -89,6 +90,7 @@ Ok(
                             ),
                         ),
                         tls: None,
+                        aws_sigv4: None,
                     },
                     TargetConfig {
                         id: Some(
@@ -119,6 +121,7 @@ Ok(
                         error_status: None,
                         condition: None,
                         tls: None,
+                        aws_sigv4: None,
                     },
                 ],
                 log_target_status: false,
@@ -151,7 +154,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.4.5",
+                                            "0.5.0",
                                         ),
                                     },
                                     HeaderTransform {

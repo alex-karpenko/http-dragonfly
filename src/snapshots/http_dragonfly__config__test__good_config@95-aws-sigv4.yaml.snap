@@ -1,0 +1,75 @@
+---
+source: src/config.rs
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
+input_file: tests/configs/good/95-aws-sigv4.yaml
+---
+Ok(
+    AppConfig {
+        listeners: [
+            ListenerConfig {
+                id: None,
+                listen_on: ListenOn {
+                    ip: 0.0.0.0,
+                    port: 8080,
+                },
+                timeout: 10s,
+                strategy: FailedThenOverride,
+                headers: None,
+                methods: None,
+                targets: [
+                    TargetConfig {
+                        id: None,
+                        url: "https://my-bucket.s3.us-east-1.amazonaws.com/key",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: None,
+                        tls: None,
+                        aws_sigv4: Some(
+                            AwsSigV4Config {
+                                service: "s3",
+                                region: None,
+                                role_arn: None,
+                            },
+                        ),
+                    },
+                    TargetConfig {
+                        id: None,
+                        url: "https://search-my-domain.us-west-2.es.amazonaws.com/_search",
+                        headers: None,
+                        body: None,
+                        timeout: 60s,
+                        on_error: Propagate,
+                        error_status: None,
+                        condition: None,
+                        tls: None,
+                        aws_sigv4: Some(
+                            AwsSigV4Config {
+                                service: "es",
+                                region: Some(
+                                    "us-west-2",
+                                ),
+                                role_arn: Some(
+                                    "arn:aws:iam::123456789012:role/my-role",
+                                ),
+                            },
+                        ),
+                    },
+                ],
+                log_target_status: false,
+                response: ResponseConfig {
+                    target_selector: None,
+                    failed_status_regex: "4\\d{2}|5\\d{2}",
+                    no_targets_status: 500,
+                    override_config: None,
+                },
+                tls: TlsConfig {
+                    verify: Yes,
+                    ca: None,
+                },
+            },
+        ],
+    },
+)

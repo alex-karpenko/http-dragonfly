@@ -1,0 +1,5 @@
+listeners:
+  - targets:
+      - url: https://example.com/
+        aws_sigv4:
+          service: ""
