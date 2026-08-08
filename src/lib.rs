@@ -3,6 +3,7 @@ pub mod config;
 pub mod context;
 pub mod signal;
 
+mod aws_auth;
 mod handler;
 mod health_check;
 
@@ -36,6 +37,7 @@ pub async fn run(
 
     let root_ctx = Arc::new(Context::root(env_provider));
     let app_config = AppConfig::new(cli_config.config_path(), *root_ctx)?;
+    aws_auth::init(app_config).await?;
     let mut servers: Vec<HyperTaskJoinHandle> = vec![];
 
     for cfg in app_config.listeners().iter().map(Arc::new) {

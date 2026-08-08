@@ -210,6 +210,7 @@ impl ResponseBehavior for ResponseConfig {
                     }
                 }
                 ResponseResult::Timeout => resp.status(StatusCode::GATEWAY_TIMEOUT),
+                ResponseResult::SigningError(_) => resp.status(StatusCode::INTERNAL_SERVER_ERROR),
                 _ => {
                     panic!("Looks like a BUG!")
                 }

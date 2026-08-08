@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # 1 - files prefix
 #     may include path to destination folder
@@ -28,5 +29,9 @@ cat ${prefix}end.crt ${prefix}inter.crt > ${prefix}test-server.pem
 cat ${prefix}inter.crt ${prefix}ca.crt > ${prefix}ca.pem
 rm ${prefix}*.req ${prefix}ca.key ${prefix}inter.key ${prefix}end.key
 
-mkdir tests/tls
-cp ${prefix}ca.* tests/tls/
+# Everything lives under $prefix (== OUT_DIR/), which Cargo gives a fresh,
+# uniquely-hashed directory per build -- never shared with any other,
+# independent cargo invocation (e.g. an IDE's background `cargo check`). Tests
+# read these files straight from OUT_DIR (see tests/common/mod.rs and
+# tests/tls.rs) instead of a shared, mutable path, so there's nothing left to
+# publish here and nothing for concurrent builds to race on.

@@ -1,4 +1,5 @@
 use super::{
+    aws_sigv4::AwsSigV4Config,
     headers::HeaderTransform,
     listener::{TlsConfig, TlsVerifyConfig},
     response::ResponseStatus,
@@ -7,7 +8,7 @@ use super::{
 use crate::{config::ConfigError, context::Context};
 use core::fmt;
 use http_body_util::Full;
-use hyper::{body::Bytes, http::request::Parts, Uri};
+use hyper::{body::Bytes, http::request::Parts, Request, Uri};
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::{
     client::legacy::{connect::HttpConnector, Client},
@@ -58,6 +59,7 @@ pub struct TargetConfig {
     condition: Option<TargetConditionConfig>,
     #[serde(default)]
     tls: Option<TlsConfig>,
+    aws_sigv4: Option<AwsSigV4Config>,
 }
 
 impl TargetConfig {
@@ -113,6 +115,23 @@ impl TargetConfig {
 
     pub fn condition(&self) -> &Option<TargetConditionConfig> {
         &self.condition
+    }
+
+    pub fn aws_sigv4(&self) -> Option<&AwsSigV4Config> {
+        self.aws_sigv4.as_ref()
+    }
+
+    /// Signs the request with AWS SigV4 if this target has `aws_sigv4` configured.
+    /// No-op if it doesn't.
+    pub(crate) async fn sign_request(
+        &self,
+        request: &mut Request<Full<Bytes>>,
+        body: &Bytes,
+    ) -> Result<(), crate::aws_auth::AwsAuthError> {
+        if let Some(aws_sigv4_cfg) = self.aws_sigv4() {
+            crate::aws_auth::sign_request(aws_sigv4_cfg, &self.id(), request, body).await?;
+        }
+        Ok(())
     }
 
     /// Returns http client with configured (or default) tls config and timeout
@@ -447,6 +466,10 @@ impl ConfigValidator for TargetConfig {
             }
         }
 
+        if let Some(aws_sigv4) = self.aws_sigv4() {
+            aws_sigv4.validate()?;
+        }
+
         Ok(())
     }
 }
@@ -539,6 +562,7 @@ pub mod test_target {
             error_status: None,
             condition: Some(TargetConditionConfig::Default),
             tls: Default::default(),
+            aws_sigv4: None,
         }
     }
 }

@@ -1,0 +1,10 @@
+listeners:
+  - targets:
+      - url: https://my-bucket.s3.us-east-1.amazonaws.com/key
+        aws_sigv4:
+          service: s3
+      - url: https://search-my-domain.us-west-2.es.amazonaws.com/_search
+        aws_sigv4:
+          service: es
+          region: us-west-2
+          role_arn: arn:aws:iam::123456789012:role/my-role

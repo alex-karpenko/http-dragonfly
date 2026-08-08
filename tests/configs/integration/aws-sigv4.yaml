@@ -1,0 +1,31 @@
+# Requires a localstack container; port is substituted via the
+# TEST_HTTP_ENV_LOCALSTACK_PORT env var set by tests/aws_sigv4.rs.
+#
+# Two listeners: one signs with the default (env) AWS credentials, the other
+# signs via an assumed IAM role, proving both credential paths work end to end.
+
+listeners:
+  - id: aws-sigv4-default-creds
+    listen_on: "*:9101"
+    strategy: always_target_id
+    targets:
+      - id: s3
+        url: http://127.0.0.1:${TEST_HTTP_ENV_LOCALSTACK_PORT}/${CTX_REQUEST_PATH}
+        aws_sigv4:
+          service: s3
+          region: us-east-1
+    response:
+      target_selector: s3
+
+  - id: aws-sigv4-assumed-role
+    listen_on: "*:9102"
+    strategy: always_target_id
+    targets:
+      - id: s3
+        url: http://127.0.0.1:${TEST_HTTP_ENV_LOCALSTACK_PORT}/${CTX_REQUEST_PATH}
+        aws_sigv4:
+          service: s3
+          region: us-east-1
+          role_arn: arn:aws:iam::000000000000:role/http-dragonfly-test-role
+    response:
+      target_selector: s3

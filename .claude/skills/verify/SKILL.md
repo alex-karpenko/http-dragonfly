@@ -5,11 +5,12 @@ description: Run the full local CI-equivalent check for http-dragonfly (build, t
 
 Run these in order and report pass/fail for each. Stop and report immediately if one fails — don't run the rest until it's fixed, except where noted.
 
-1. `cargo build`
-2. `cargo test` — if it fails on insta snapshot mismatches, show the diff and ask before running `cargo insta accept`.
-3. `cargo fmt --all -- --check`
-4. `cargo clippy --all-targets -- -D warnings`
-5. `pre-commit run --all-files`
+1. `cargo clean`
+2. `cargo build`
+3. `cargo test` — if it fails on insta snapshot mismatches, show the diff and ask before running `cargo insta accept`.
+4. `cargo fmt --all -- --check`
+5. `cargo clippy --all-targets -- -D warnings`
+6. `pre-commit run --all-files`
 
 Steps 1-4 mirror exactly what `.github/workflows/ci.yaml` runs on every PR. Step 5 runs the local dev-workflow gate from `.pre-commit-config.yaml` (trailing whitespace, check-yaml/toml/json, large-file/secret detection, plus `cargo fmt --` and `cargo check` again).
 

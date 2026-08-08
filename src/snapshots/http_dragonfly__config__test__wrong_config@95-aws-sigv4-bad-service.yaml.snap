@@ -1,0 +1,8 @@
+---
+source: src/config.rs
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
+input_file: tests/configs/wrong/95-aws-sigv4-bad-service.yaml
+---
+Err(
+    invalid config: `aws_sigv4.service` must not be empty,
+)
