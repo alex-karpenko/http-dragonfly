@@ -2,7 +2,7 @@ use super::{provider_for, AwsAuthError, SDK_CONFIG};
 use crate::config::aws_sigv4::AwsSigV4Config;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_sigv4::{
-    http_request::{sign, SignableBody, SignableRequest, SigningSettings},
+    http_request::{sign, PayloadChecksumKind, SignableBody, SignableRequest, SigningSettings},
     sign::v4,
 };
 use http_body_util::Full;
@@ -38,7 +38,13 @@ pub(crate) async fn sign_request(
             })?;
 
     let identity = credentials.into();
-    let signing_settings = SigningSettings::default();
+    let mut signing_settings = SigningSettings::default();
+    if aws_sigv4_cfg.service() == "s3" {
+        // S3 requires the `x-amz-content-sha256` header on every signed request;
+        // `NoHeader` (the crate default) omits it and S3 rejects the request with
+        // "Missing required header for this request: x-amz-content-sha256".
+        signing_settings.payload_checksum_kind = PayloadChecksumKind::XAmzSha256;
+    }
     let signing_params: v4::SigningParams<SigningSettings> = v4::SigningParams::builder()
         .identity(&identity)
         .region(&region)
@@ -134,6 +140,71 @@ mod tests {
             .headers()
             .get(HeaderName::from_static("x-amz-date"))
             .is_some());
+    }
+
+    fn test_sdk_config() -> aws_config::SdkConfig {
+        aws_config::SdkConfig::builder()
+            .region(aws_config::Region::new("us-east-1"))
+            .credentials_provider(
+                aws_credential_types::provider::SharedCredentialsProvider::new(Credentials::new(
+                    "AKIDEXAMPLE",
+                    "secretkey",
+                    None,
+                    None,
+                    "test",
+                )),
+            )
+            .build()
+    }
+
+    #[tokio::test]
+    async fn s3_service_gets_content_sha256_header() {
+        // `SDK_CONFIG` is a process-wide `OnceCell`; ignore an already-set error so
+        // this test can run alongside `non_s3_service_omits_content_sha256_header`.
+        let _ = SDK_CONFIG.set(test_sdk_config());
+        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: s3").unwrap();
+        let body = Bytes::from_static(b"hello world");
+        let mut request: Request<Full<Bytes>> = Request::builder()
+            .method("PUT")
+            .uri("https://examplebucket.s3.amazonaws.com/test.txt")
+            .header("host", "examplebucket.s3.amazonaws.com")
+            .body(Full::from(body.clone()))
+            .unwrap();
+
+        sign_request(&cfg, "test-target", &mut request, &body)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            request
+                .headers()
+                .get(HeaderName::from_static("x-amz-content-sha256"))
+                .map(|v| v.to_str().unwrap()),
+            // sha256("hello world")
+            Some("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9")
+        );
+    }
+
+    #[tokio::test]
+    async fn non_s3_service_omits_content_sha256_header() {
+        let _ = SDK_CONFIG.set(test_sdk_config());
+        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: execute-api").unwrap();
+        let body = Bytes::from_static(b"hello world");
+        let mut request: Request<Full<Bytes>> = Request::builder()
+            .method("GET")
+            .uri("https://abc123.execute-api.us-east-1.amazonaws.com/prod/")
+            .header("host", "abc123.execute-api.us-east-1.amazonaws.com")
+            .body(Full::from(body.clone()))
+            .unwrap();
+
+        sign_request(&cfg, "test-target", &mut request, &body)
+            .await
+            .unwrap();
+
+        assert!(request
+            .headers()
+            .get(HeaderName::from_static("x-amz-content-sha256"))
+            .is_none());
     }
 
     #[test]

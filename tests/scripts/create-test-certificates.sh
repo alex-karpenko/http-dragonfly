@@ -29,29 +29,9 @@ cat ${prefix}end.crt ${prefix}inter.crt > ${prefix}test-server.pem
 cat ${prefix}inter.crt ${prefix}ca.crt > ${prefix}ca.pem
 rm ${prefix}*.req ${prefix}ca.key ${prefix}inter.key ${prefix}end.key
 
-# tests/tls/ is a fixed path shared by every build.rs invocation (test fixtures
-# reference it directly, so it can't be scoped to this run's OUT_DIR). Without
-# coordination, concurrent invocations of this script -- e.g. an IDE's
-# background `cargo check` racing a terminal `cargo test` -- can interleave
-# their mkdir/cp here and leave tests/tls/ empty or holding a CA/server-cert
-# pair from two different runs, which then fails TLS handshakes. Serialize the
-# publish step with a portable mkdir-based lock; if it's still held after 15s
-# (should never happen, the critical section is a couple of file copies),
-# proceed anyway rather than deadlock.
-lock_dir="tests/.tls.lock"
-lock_acquired=0
-attempt=0
-while [ "${attempt}" -lt 150 ]; do
-    if mkdir "${lock_dir}" 2>/dev/null; then
-        lock_acquired=1
-        break
-    fi
-    attempt=$((attempt + 1))
-    sleep 0.1
-done
-if [ "${lock_acquired}" -eq 1 ]; then
-    trap 'rmdir "${lock_dir}" 2>/dev/null || true' EXIT INT TERM
-fi
-
-mkdir -p tests/tls
-cp ${prefix}ca.* tests/tls/
+# Everything lives under $prefix (== OUT_DIR/), which Cargo gives a fresh,
+# uniquely-hashed directory per build -- never shared with any other,
+# independent cargo invocation (e.g. an IDE's background `cargo check`). Tests
+# read these files straight from OUT_DIR (see tests/common/mod.rs and
+# tests/tls.rs) instead of a shared, mutable path, so there's nothing left to
+# publish here and nothing for concurrent builds to race on.

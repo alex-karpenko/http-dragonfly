@@ -533,6 +533,11 @@ AWS SDK's standard credential resolution is used (environment variables, `~/.aws
 and `~/.aws/config`, SSO, EC2/ECS/container instance metadata, etc.), exactly as the AWS CLI
 and other AWS SDKs resolve credentials by default.
 
+If you test locally against a profile that has a `login_session` entry in `~/.aws/config`
+(AWS CLI's browser-based login flow), build with `--features credentials-login` — that
+provider is gated behind an off-by-default Cargo feature since it pulls in an extra AWS SDK
+crate that release builds don't need.
+
 The AWS SDK is only initialized if at least one target in the whole configuration has
 `aws_sigv4` set. Credentials are cached and shared across all targets that resolve to the
 same identity (the default identity, or a given `role_arn`) to avoid hammering STS/IMDS with

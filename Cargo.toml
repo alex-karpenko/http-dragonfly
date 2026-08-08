@@ -46,6 +46,13 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 uuid = { version = "1.24.0", features = ["v4", "fast-rng"] }
 
+[features]
+# Enables aws-config's browser-based "login session" credential provider.
+# Off by default: it's only needed to test aws_sigv4 signing locally against a
+# profile that uses `login_session` (see README), and it pulls in an extra AWS
+# SDK crate (aws-sdk-signin) that normal deployments don't need.
+credentials-login = ["aws-config/credentials-login"]
+
 [dev-dependencies]
 insta = { version = "1.48.0", features = ["glob", "ron", "redactions", "filters"] }
 reqwest = "0.13.4"

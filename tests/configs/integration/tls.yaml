@@ -1,4 +1,8 @@
 # Requires TLS echo server on port 3001
+#
+# `ca:` paths below use the literal placeholder `tests/tls/`, rewritten by
+# tests/tls.rs to the current build's OUT_DIR (where the CA bundle is actually
+# generated) before this file is loaded -- see resolve_test_config_path().
 
 # 9000 - fails due to unknown cert
 # 9001 - disabled tls verification
