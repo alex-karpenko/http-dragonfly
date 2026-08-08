@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-08-08
+### Details
+#### Added
+- Implement target request signing with AWS SigV4 by @alex-karpenko in [#47](https://github.com/alex-karpenko/http-dragonfly/pull/47)
+
 ## [0.4.5] - 2026-07-25
 ### Details
 #### Fixed
@@ -185,6 +190,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.5.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.5..v0.5.0
 [0.4.5]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.4..v0.4.5
 [0.4.4]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.3..v0.4.4
 [0.4.3]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.2..v0.4.3
