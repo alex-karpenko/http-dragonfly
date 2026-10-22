@@ -162,7 +162,7 @@ mod tests {
         // `SDK_CONFIG` is a process-wide `OnceCell`; ignore an already-set error so
         // this test can run alongside `non_s3_service_omits_content_sha256_header`.
         let _ = SDK_CONFIG.set(test_sdk_config());
-        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: s3").unwrap();
+        let cfg: AwsSigV4Config = serde_saphyr::from_str("service: s3").unwrap();
         let body = Bytes::from_static(b"hello world");
         let mut request: Request<Full<Bytes>> = Request::builder()
             .method("PUT")
@@ -188,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn non_s3_service_omits_content_sha256_header() {
         let _ = SDK_CONFIG.set(test_sdk_config());
-        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: execute-api").unwrap();
+        let cfg: AwsSigV4Config = serde_saphyr::from_str("service: execute-api").unwrap();
         let body = Bytes::from_static(b"hello world");
         let mut request: Request<Full<Bytes>> = Request::builder()
             .method("GET")

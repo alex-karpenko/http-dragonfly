@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn parses_minimal() {
-        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: s3").unwrap();
+        let cfg: AwsSigV4Config = serde_saphyr::from_str("service: s3").unwrap();
         assert_eq!(cfg.service(), "s3");
         assert_eq!(cfg.region(), None);
         assert_eq!(cfg.role_arn(), None);
@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn parses_full() {
-        let cfg: AwsSigV4Config = serde_yaml_ng::from_str(
+        let cfg: AwsSigV4Config = serde_saphyr::from_str(
             "service: execute-api\nregion: eu-west-1\nrole_arn: arn:aws:iam::123456789012:role/my-role",
         )
         .unwrap();
@@ -74,21 +74,21 @@ mod tests {
 
     #[test]
     fn rejects_empty_service() {
-        let cfg: AwsSigV4Config = serde_yaml_ng::from_str("service: \"\"").unwrap();
+        let cfg: AwsSigV4Config = serde_saphyr::from_str("service: \"\"").unwrap();
         assert!(cfg.validate().is_err());
     }
 
     #[test]
     fn rejects_bad_role_arn() {
         let cfg: AwsSigV4Config =
-            serde_yaml_ng::from_str("service: s3\nrole_arn: not-an-arn").unwrap();
+            serde_saphyr::from_str("service: s3\nrole_arn: not-an-arn").unwrap();
         assert!(cfg.validate().is_err());
     }
 
     #[test]
     fn rejects_unknown_field() {
         let result: Result<AwsSigV4Config, _> =
-            serde_yaml_ng::from_str("service: s3\naccess_key: AKIA...");
+            serde_saphyr::from_str("service: s3\naccess_key: AKIA...");
         assert!(result.is_err());
     }
 }
