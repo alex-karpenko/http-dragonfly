@@ -58,7 +58,7 @@ pub async fn run_test_with_config(
     test: impl Future,
 ) -> Result<(), String> {
     if is_tls {
-        let out_dir = env::var("OUT_DIR").unwrap();
+        let out_dir = env!("OUT_DIR");
         let cert_path = format!("{out_dir}/{SERVER_CERT_BUNDLE}");
         let key_path = format!("{out_dir}/{SERVER_PRIVATE_KEY}");
 
