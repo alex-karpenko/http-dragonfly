@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] - 2026-11-26
+### Details
+#### Added
+- Support wildcard patterns in header drop transforms by @alex-karpenko in [#51](https://github.com/alex-karpenko/http-dragonfly/pull/51)
+
+#### Fixed
+- Update dependencies to fix known vulneravilities (mostly RustSec advisories) by @alex-karpenko in [#50](https://github.com/alex-karpenko/http-dragonfly/pull/50)
+- Log client header read timeouts at debug level by @alex-karpenko in [#52](https://github.com/alex-karpenko/http-dragonfly/pull/52)
+
 ## [0.5.2] - 2026-10-22
 ### Details
 #### Fixed
@@ -200,6 +209,7 @@ All notable changes to this project will be documented in this file.
 ## New Contributors
 * @alex-karpenko made their first contribution in [#1](https://github.com/alex-karpenko/http-dragonfly/pull/1)
 
+[0.5.3]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.5.2..v0.5.3
 [0.5.2]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.5.1..v0.5.2
 [0.5.1]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.5.0..v0.5.1
 [0.5.0]: https://github.com/alex-karpenko/http-dragonfly/compare/v0.4.5..v0.5.0
