@@ -25,7 +25,7 @@ use tokio::{
     select,
     task::{JoinHandle, JoinSet},
 };
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 pub type HyperTaskJoinHandle = JoinHandle<Result<(), anyhow::Error>>;
 
@@ -99,7 +99,11 @@ async fn service_loop(
                         .await;
 
                     if let Err(e) = result {
-                        error!(error = %e, "error serving request from {addr}");
+                        if is_client_header_timeout(&*e) {
+                            debug!(error = %e, "error serving request from {addr}");
+                        } else {
+                            error!(error = %e, "error serving request from {addr}");
+                        }
                     }
                 };
 
@@ -109,4 +113,97 @@ async fn service_loop(
     }
 
     Ok(())
+}
+
+/// Idle clients (e.g. browsers holding preconnected sockets) hitting `header_read_timeout`
+/// are a client-side condition, not a server fault.
+fn is_client_header_timeout(e: &(dyn std::error::Error + Send + Sync + 'static)) -> bool {
+    e.downcast_ref::<hyper::Error>()
+        .is_some_and(hyper::Error::is_timeout)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyper::{body::Incoming, Request, Response};
+    use std::{
+        convert::Infallible,
+        io::{Read, Write},
+        time::Duration,
+    };
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+    /// Accepts one connection with the same http1 builder settings as `service_loop`,
+    /// runs `client` against it and returns the connection result.
+    async fn serve_one(client: impl FnOnce(std::net::TcpStream) + Send + 'static) -> BoxError {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let client = tokio::task::spawn_blocking(move || {
+            client(std::net::TcpStream::connect(addr).unwrap());
+        });
+
+        let (stream, _) = listener.accept().await.unwrap();
+        let result = Builder::new(TokioExecutor::new())
+            .http1()
+            .timer(TokioTimer::default())
+            .header_read_timeout(Duration::from_millis(100))
+            .serve_connection(
+                TokioIo::new(stream),
+                service_fn(|_: Request<Incoming>| async {
+                    Ok::<_, Infallible>(Response::new(String::new()))
+                }),
+            )
+            .await;
+
+        client.await.unwrap();
+        result.expect_err("connection should fail")
+    }
+
+    #[tokio::test]
+    async fn idle_keep_alive_client_is_header_timeout() {
+        // Browser-like behaviour: complete one request, then keep the connection open without
+        // sending the next one. hyper re-arms header_read_timeout for the idle keep-alive connection.
+        let err = serve_one(|mut stream| {
+            stream
+                .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+                .unwrap();
+            let mut buf = [0u8; 1024];
+            let n = stream.read(&mut buf).unwrap();
+            assert!(buf[..n].starts_with(b"HTTP/1.1 200"));
+            std::thread::sleep(Duration::from_millis(500));
+        })
+        .await;
+
+        assert!(is_client_header_timeout(&*err), "unexpected error: {err}");
+    }
+
+    #[tokio::test]
+    async fn partial_headers_is_header_timeout() {
+        let err = serve_one(|mut stream| {
+            stream.write_all(b"GET / HTTP/1.1\r\nHost: loc").unwrap();
+            std::thread::sleep(Duration::from_millis(500));
+        })
+        .await;
+
+        assert!(is_client_header_timeout(&*err), "unexpected error: {err}");
+    }
+
+    #[tokio::test]
+    async fn malformed_request_is_not_header_timeout() {
+        let err = serve_one(|mut stream| {
+            stream.write_all(b"NOT HTTP AT ALL\r\n\r\n").unwrap();
+            std::thread::sleep(Duration::from_millis(50));
+        })
+        .await;
+
+        assert!(!is_client_header_timeout(&*err), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn non_hyper_error_is_not_header_timeout() {
+        let err: BoxError = Box::new(std::io::Error::from(std::io::ErrorKind::TimedOut));
+        assert!(!is_client_header_timeout(&*err));
+    }
 }
