@@ -1,8 +1,8 @@
 ---
 source: src/config.rs
-expression: "AppConfig::owned(&String::from(path.to_str().unwrap()), &ctx)"
+expression: "AppConfig::from_file(&String::from(path.to_str().unwrap()), ctx)"
 input_file: tests/configs/wrong/01-without-targets.yaml
 ---
 Err(
-    invalid config: at least one target must be configured,
+    unable to parse config: expected sequence start at line 2, column 12,
 )
