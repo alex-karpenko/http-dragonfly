@@ -7,7 +7,12 @@ no-default-features = false
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # TODO: temporary exceptions for unmaintained crates (no vulnerabilities), revisit periodically.
+    { id = "RUSTSEC-2026-0440", reason = "astral-tokio-tar unmaintained; dev-only via testcontainers" },
+    { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; transitive via jaq-std and serde_with (testcontainers)" },
+    { id = "RUSTSEC-2026-0542", reason = "humantime unmaintained; transitive via humantime-serde" },
+]
 
 [licenses]
 allow = ["MIT", "Apache-2.0", "ISC", "BSD-3-Clause", "Unicode-3.0", "CDLA-Permissive-2.0", "Zlib"]

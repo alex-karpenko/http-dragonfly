@@ -1,0 +1,10 @@
+# cargo-audit configuration.
+# Keep in sync with `[advisories].ignore` in deny.toml.
+
+[advisories]
+# TODO: temporary exceptions for unmaintained crates (no vulnerabilities), revisit periodically.
+ignore = [
+    "RUSTSEC-2026-0440", # astral-tokio-tar unmaintained; dev-only via testcontainers
+    "RUSTSEC-2026-0543", # chrono unmaintained; transitive via jaq-std and serde_with (testcontainers)
+    "RUSTSEC-2026-0542", # humantime unmaintained; transitive via humantime-serde
+]
