@@ -154,7 +154,7 @@ Ok(
                                             "X-Http-Splitter-Version",
                                         ),
                                         value: Some(
-                                            "0.5.2",
+                                            "0.5.3",
                                         ),
                                     },
                                     HeaderTransform {
