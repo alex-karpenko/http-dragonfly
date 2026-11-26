@@ -407,7 +407,10 @@ Possible transformations:
   ignored.
 - `update` - change value of existing header with specified name, if header doesn't exist - transformation will be
   ignored.
-- `drop` - drops header with specified name if it exists. Special case is `*` name which drops all headers.
+- `drop` - drops header with specified name if it exists. The name may contain `*` wildcards, each matching any
+  (possibly empty) sequence of characters, so a single action can drop a whole group of headers, e.g. `x-amzn-*`
+  drops every header starting with `x-amzn-`, `*-id` drops every header ending with `-id`. Matching is
+  case-insensitive, like header names themselves. Special case is the bare `*` name which drops all headers.
 
 Examples:
 
@@ -416,6 +419,7 @@ headers:
   - add: X-Some-Fun
     value: "123"
   - drop: Content-Type
+  - drop: X-Amzn-*
   - add: Accept
     value: "*"
 ```
@@ -684,6 +688,7 @@ listeners:
       - update: Authorization
         value: ${HTTP_ENV_SOME_AUTH_TOKEN}
       - drop: X-Forwarded-For
+      - drop: X-Amzn-* # wildcard, drops all headers with X-Amzn- prefix
       - update: User-Agent
         value: "this was ${CTX_REQUEST_HEADERS_USER_AGENT}"
 

@@ -164,6 +164,19 @@ impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
                     if key == "*" {
                         debug!("drop: all headers");
                         headers.clear();
+                    } else if key.contains('*') {
+                        let to_drop: Vec<HeaderName> = headers
+                            .keys()
+                            .filter(|name| wildcard_match(&key, name.as_str()))
+                            .cloned()
+                            .collect();
+                        if to_drop.is_empty() {
+                            debug!("drop: pattern={key}, nothing matched");
+                        }
+                        for name in to_drop {
+                            headers.remove(&name);
+                            debug!("drop: pattern={key}, name={name}");
+                        }
                     } else {
                         let debug_key = key.clone();
                         let old = headers.remove(key);
@@ -177,6 +190,36 @@ impl<'a> HeadersTransformator<'a> for HeadersTransformsList {
             };
         }
     }
+}
+
+/// Case-insensitive glob match of a header name against a pattern,
+/// where `*` matches any (possibly empty) sequence of characters.
+fn wildcard_match(pattern: &str, name: &str) -> bool {
+    let pattern = pattern.as_bytes();
+    let name = name.as_bytes();
+
+    let (mut p, mut n) = (0, 0);
+    // Position of the last seen `*` in pattern and the name position it was tried at.
+    let mut backtrack: Option<(usize, usize)> = None;
+
+    while n < name.len() {
+        if p < pattern.len() && pattern[p] == b'*' {
+            backtrack = Some((p, n));
+            p += 1;
+        } else if p < pattern.len() && pattern[p].eq_ignore_ascii_case(&name[n]) {
+            p += 1;
+            n += 1;
+        } else if let Some((star_p, star_n)) = backtrack {
+            // Let the last `*` consume one more character and retry.
+            p = star_p + 1;
+            n = star_n + 1;
+            backtrack = Some((star_p, n));
+        } else {
+            return false;
+        }
+    }
+
+    pattern[p..].iter().all(|&c| c == b'*')
 }
 
 #[cfg(test)]
@@ -260,5 +303,70 @@ mod tests {
         transforms.transform(&mut headers, ctx);
         // After transformation
         assert_debug_snapshot!(headers);
+    }
+
+    #[test]
+    fn wildcard_matching() {
+        let cases = [
+            ("x-amzn-*", "x-amzn-trace-id", true),
+            ("x-amzn-*", "x-amzn-", true),
+            ("X-Amzn-*", "x-amzn-requestid", true),
+            ("x-amzn-*", "x-amz-date", false),
+            ("x-amzn-*", "prefix-x-amzn-id", false),
+            ("*-id", "x-request-id", true),
+            ("*-id", "x-request-ids", false),
+            ("x-*-id", "x-request-id", true),
+            ("x-*-id", "x-id", false),
+            ("x-*-*-id", "x-a-b-id", true),
+            ("x-*-*-id", "x-a-id", false),
+            ("*amzn*", "x-amzn-trace-id", true),
+            ("*amzn*", "amzn", true),
+            ("*amzn*", "x-amz-date", false),
+            ("**", "anything", true),
+            ("*", "", true),
+            ("a*b*c", "aXbYbZc", true),
+            ("a*b*c", "aXbYcZ", false),
+        ];
+
+        for (pattern, name, expected) in cases {
+            assert_eq!(
+                wildcard_match(pattern, name),
+                expected,
+                "pattern `{pattern}` vs name `{name}`"
+            );
+        }
+    }
+
+    #[test]
+    fn wildcard_drop_transforms() {
+        let ctx = get_test_ctx();
+
+        let transforms: HeadersTransformsList = serde_json::from_str(
+            r#"
+        [
+            {"drop": "X-Amzn-*"},
+            {"drop": "*-trace"},
+            {"drop": "x-no-match-*"}
+        ]
+        "#,
+        )
+        .unwrap();
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-amzn-trace-id", "drop".parse().unwrap());
+        headers.insert("x-amzn-requestid", "drop".parse().unwrap());
+        headers.append("x-amzn-multi", "drop-1".parse().unwrap());
+        headers.append("x-amzn-multi", "drop-2".parse().unwrap());
+        headers.insert("x-b3-trace", "drop".parse().unwrap());
+        headers.insert("x-amz-date", "keep".parse().unwrap());
+        headers.insert("x-trace-keep", "keep".parse().unwrap());
+        headers.insert("content-type", "keep".parse().unwrap());
+
+        transforms.transform(&mut headers, ctx);
+
+        let mut remaining: Vec<&str> = headers.keys().map(|k| k.as_str()).collect();
+        remaining.sort_unstable();
+        assert_eq!(remaining, ["content-type", "x-amz-date", "x-trace-keep"]);
+        assert!(headers.values().all(|v| v == "keep"));
     }
 }
