@@ -25,7 +25,7 @@ use tokio::{
     select,
     task::{JoinHandle, JoinSet},
 };
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 pub type HyperTaskJoinHandle = JoinHandle<Result<(), anyhow::Error>>;
 
@@ -99,7 +99,16 @@ async fn service_loop(
                         .await;
 
                     if let Err(e) = result {
-                        error!(error = %e, "error serving request from {addr}");
+                        // Idle clients (e.g. browsers holding preconnected sockets) hitting
+                        // header_read_timeout are a client-side condition, not a server fault.
+                        let is_header_timeout = e
+                            .downcast_ref::<hyper::Error>()
+                            .is_some_and(hyper::Error::is_timeout);
+                        if is_header_timeout {
+                            debug!(error = %e, "error serving request from {addr}");
+                        } else {
+                            error!(error = %e, "error serving request from {addr}");
+                        }
                     }
                 };
 
